@@ -195,6 +195,11 @@ tbody tr:hover{background:#fafcff}
       <div class="seg strategy" id="segStrategy"></div>
     </div>
 
+    <div class="ctrl">
+      <div class="lbl">推荐组数 <span>（生成多少注 6 红 + 1 蓝的单式推荐，每注 2 元）</span></div>
+      <div class="seg strategy" id="segCount"></div>
+    </div>
+
     <button class="btn-go" id="btnGo">开 始 计 算</button>
   </section>
 
@@ -204,19 +209,20 @@ tbody tr:hover{background:#fafcff}
       <div class="badge" id="resBadge"></div>
     </div>
 
-    <div class="grp">
-      <div class="gt">红球</div>
+    <div class="grp" id="compoundGrp">
+      <div class="gt">复式主推荐 · 红球</div>
       <div class="balls-row" id="resReds"></div>
     </div>
 
-    <div class="grp">
-      <div class="gt">蓝球</div>
+    <div class="grp" id="compoundGrpB">
+      <div class="gt">复式主推荐 · 蓝球</div>
       <div class="balls-row" id="resBlues"></div>
     </div>
 
     <div class="grp" id="singleGrp">
-      <div class="gt">单式参考（从上方复式中拆出的高均衡组合，每注独立计价）</div>
+      <div class="gt" id="singlesTitle">推荐号码（单式，每注独立计价）</div>
       <div class="singles" id="resSingles"></div>
+      <div class="note" id="singlesTotal" style="margin-top:11px"></div>
     </div>
 
     <div class="cost" id="resCost"></div>
@@ -426,33 +432,44 @@ function combosOf(arr, k) {
   return res;
 }
 
-/* 从 m 个红球中挑出最多 limit 组"形态最均衡"的 6 红组合作为单式参考 */
-function bestSingles(reds, blues, st, limit) {
-  limit = limit || 3;
-  if (reds.length < 6) return [];
-  const all = combosOf(reds, 6);
+/* 生成 count 注单式推荐:从评分前列红球池中挑"形态最均衡"且互相有差异的 6 红组合 */
+function makeSingles(reds, blues, rs, st, count, m) {
+  count = count || 3;
+  const sorted = rs.slice().sort((a, b) => b.score - a.score);
+  // 候选池:保证组合数足够(16 个红球可组 8008 种),同时贴合主推荐
+  const poolSize = Math.min(16, Math.max(14, m + 4));
+  const pool = sorted.slice(0, poolSize).map(x => x.n);
+  const coreSet = new Set(reds);
+  const all = combosOf(pool, 6);
   const avg = st.redSumAvg;
   const scored = all.map(c => {
     const sum = c.reduce((a, b) => a + b, 0);
     const odd = c.filter(n => n % 2 === 1).length;
     const zc = ZONES.map(z => c.filter(n => n >= z[0] && n <= z[1]).length);
     const zDev = zc.reduce((a, v) => a + Math.abs(v - 2), 0);
-    const sc = -Math.abs(sum - avg) / 12 - Math.abs(odd - 3) * 1.6 - zDev * 1.1;
-    return { c, sum, odd, sc, zc };
+    const coreBonus = c.reduce((a, n) => a + (coreSet.has(n) ? 0.15 : 0), 0);
+    return { c, sum, odd, sc: -Math.abs(sum - avg) / 12 - Math.abs(odd - 3) * 1.6 - zDev * 1.1 + coreBonus };
   }).sort((a, b) => b.sc - a.sc);
 
-  const picked = [];
-  for (const s of scored) {
-    if (picked.length >= limit) break;
-    // 与已选组合重复 5 个及以上则跳过，保证多样性
-    const dup = picked.some(p => p.c.filter(n => s.c.indexOf(n) >= 0).length >= 6);
-    if (!dup) picked.push(s);
+  const overlap = (a, b) => a.reduce((s, n) => s + (b.indexOf(n) >= 0 ? 1 : 0), 0);
+  // 逐级放宽重叠限制,保证凑够 count 注且彼此尽量不同
+  let sel = [];
+  for (const maxOv of [4, 5, 6, 99]) {
+    sel = [];
+    for (const s of scored) {
+      if (sel.length >= count) break;
+      if (sel.every(p => overlap(p.c, s.c) <= maxOv)) sel.push(s);
+    }
+    if (sel.length >= count) break;
   }
-  return picked.map(p => ({ red: p.c, blue: blues[0], sum: p.sum, odd: p.odd }));
+  return sel.slice(0, count).map((p, i) => ({
+    red: p.c, blue: blues[i % blues.length], sum: p.sum, odd: p.odd
+  }));
 }
 
 /* 生成完整方案 */
-function makePlan(draws, strategy, m, n) {
+function makePlan(draws, strategy, m, n, count) {
+  count = Math.max(1, count || 3);
   const st = buildStats(draws);
   const rs = scoreReds(st, strategy);
   const bs = scoreBlues(st, strategy);
@@ -468,9 +485,9 @@ function makePlan(draws, strategy, m, n) {
   const blueScored = bs.filter(x => blues.indexOf(x.n) >= 0).sort((a, b) => b.score - a.score);
 
   return {
-    strategy, m, n, st, reds, blues, redCombos, bets, cost,
+    strategy, m, n, count, st, reds, blues, redCombos, bets, cost,
     redScored, blueScored,
-    singles: bestSingles(reds, blues, st, 3),
+    singles: makeSingles(reds, blues, rs, st, count, m),
     oddCount: reds.filter(x => x % 2 === 1).length,
     sumRange: [0, 0]
   };
@@ -504,7 +521,7 @@ function backtest(draws, strategy, m, n, periods) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { comb, buildStats, scoreReds, scoreBlues, pickReds, pickBlues, makePlan, backtest, bestSingles };
+  module.exports = { comb, buildStats, scoreReds, scoreBlues, pickReds, pickBlues, makePlan, backtest, makeSingles };
 }
 /* ==================== ENGINE-END ==================== */
 
@@ -512,7 +529,7 @@ if (typeof module !== 'undefined' && module.exports) {
 /* ==================== UI ==================== */
 (function () {
   const $ = s => document.querySelector(s);
-  const state = { strategy: 'balanced', reds: 8, blues: 2 };
+  const state = { strategy: 'balanced', reds: 8, blues: 2, count: 3 };
   const STRAT_NAME = { balanced: '均衡推荐', hot: '热号追踪', cold: '冷号回补' };
 
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
@@ -522,7 +539,7 @@ if (typeof module !== 'undefined' && module.exports) {
 
   /* ---------- 控件 ---------- */
   function buildSegments() {
-    const segRed = $('#segRed'), segBlue = $('#segBlue'), segSt = $('#segStrategy');
+    const segRed = $('#segRed'), segBlue = $('#segBlue'), segSt = $('#segStrategy'), segCount = $('#segCount');
     for (let i = 6; i <= 12; i++) {
       const b = document.createElement('button');
       b.textContent = i + ' 个';
@@ -545,6 +562,17 @@ if (typeof module !== 'undefined' && module.exports) {
       };
       segBlue.appendChild(b);
     }
+    [1, 2, 3, 5, 8, 10].forEach(k => {
+      const b = document.createElement('button');
+      b.textContent = k + ' 注';
+      b.dataset.v = k;
+      if (k === state.count) b.className = 'on';
+      b.onclick = () => {
+        state.count = k;
+        [].forEach.call(segCount.children, c => c.className = (+c.dataset.v === k ? 'on' : ''));
+      };
+      segCount.appendChild(b);
+    });
     Object.keys(STRAT_NAME).forEach(k => {
       const b = document.createElement('button');
       b.textContent = STRAT_NAME[k];
@@ -666,19 +694,26 @@ if (typeof module !== 'undefined' && module.exports) {
   /* ---------- 渲染结果 ---------- */
   function renderResult(plan, noScroll) {
     const bt = backtest(DRAWS, state.strategy, state.reds, state.blues, 30);
+    const isSingleMode = (plan.m === 6 && plan.n === 1);
 
-    $('#resBadge').textContent = STRAT_NAME[state.strategy] + ' · ' + plan.m + '红 + ' + plan.n + '蓝';
+    $('#resBadge').textContent = STRAT_NAME[state.strategy] + ' · ' +
+      (isSingleMode ? '单式 × ' + plan.count : plan.m + '红 + ' + plan.n + '蓝');
 
+    $('#compoundGrp').style.display = isSingleMode ? 'none' : '';
+    $('#compoundGrpB').style.display = isSingleMode ? 'none' : '';
     $('#resReds').innerHTML = plan.reds.map(n => ballHTML(n, 'red')).join('');
     $('#resBlues').innerHTML = plan.blues.map(n => ballHTML(n, 'blue')).join('');
 
-    // 单式参考
+    // 推荐号码(单式)
     if (plan.singles.length) {
       $('#singleGrp').style.display = '';
+      $('#singlesTitle').textContent = isSingleMode
+        ? '推荐号码（' + plan.count + ' 注单式，每注独立计价）'
+        : '单式参考（按推荐组数拆出 ' + plan.count + ' 注，每注独立计价）';
       $('#resSingles').innerHTML = plan.singles.map((s, i) => {
         const odd = s.odd;
         return '<div class="single">' +
-          '<span style="font-size:12.5px;font-weight:700;color:#8b95a7">参考' + (i + 1) + '</span>' +
+          '<span style="font-size:12.5px;font-weight:700;color:#8b95a7">第 ' + (i + 1) + ' 注</span>' +
           '<span class="balls-row">' +
           s.red.map(n => ballHTML(n, 'red', 'sm')).join('') +
           ballHTML(s.blue, 'blue', 'sm') + '</span>' +
@@ -686,27 +721,41 @@ if (typeof module !== 'undefined' && module.exports) {
           '<span class="price"><b>¥' + PRICE.toFixed(2) + '</b><span>1 注 · 每注 2 元</span></span>' +
           '</div>';
       }).join('');
+      $('#singlesTotal').innerHTML = '推荐合计：<b>' + plan.singles.length + ' 注</b> × 每注 ' +
+        PRICE.toFixed(2) + ' 元 = <b>¥' + (plan.singles.length * PRICE).toFixed(2) + '</b>';
     } else {
       $('#singleGrp').style.display = 'none';
     }
 
     // 费用
-    const single = (plan.m === 6 && plan.n === 1);
-    $('#resCost').innerHTML =
-      '<div class="item"><div class="k">投注方式</div><div class="v" style="font-size:16px">' +
-        plan.m + ' 红 + ' + plan.n + ' 蓝' + (single ? '（单式）' : '（复式）') + '</div></div>' +
-      '<div class="item blue"><div class="k">红球组合数</div><div class="v">C(' + plan.m + ',6) = ' +
-        plan.redCombos + '<small>种</small></div></div>' +
-      '<div class="item blue"><div class="k">总注数</div><div class="v">' + plan.bets +
-        '<small>注</small></div></div>' +
-      '<div class="item hl"><div class="k">每注单价</div><div class="v">¥' + PRICE.toFixed(2) + '</div></div>' +
-      '<div class="item hl"><div class="k">合计金额</div><div class="v">¥' + plan.cost.toFixed(2) + '</div></div>';
+    if (isSingleMode) {
+      $('#resCost').innerHTML =
+        '<div class="item"><div class="k">投注方式</div><div class="v" style="font-size:16px">单式 × ' +
+          plan.count + ' 注（6 红 + 1 蓝）</div></div>' +
+        '<div class="item hl"><div class="k">每注单价</div><div class="v">¥' + PRICE.toFixed(2) + '</div></div>' +
+        '<div class="item hl"><div class="k">合计金额</div><div class="v">¥' +
+          (plan.count * PRICE).toFixed(2) + '</div></div>';
+    } else {
+      $('#resCost').innerHTML =
+        '<div class="item"><div class="k">投注方式</div><div class="v" style="font-size:16px">' +
+          plan.m + ' 红 + ' + plan.n + ' 蓝（复式）</div></div>' +
+        '<div class="item blue"><div class="k">红球组合数</div><div class="v">C(' + plan.m + ',6) = ' +
+          plan.redCombos + '<small>种</small></div></div>' +
+        '<div class="item blue"><div class="k">总注数</div><div class="v">' + plan.bets +
+          '<small>注</small></div></div>' +
+        '<div class="item hl"><div class="k">每注单价</div><div class="v">¥' + PRICE.toFixed(2) + '</div></div>' +
+        '<div class="item hl"><div class="k">合计金额</div><div class="v">¥' + plan.cost.toFixed(2) + '</div></div>';
+    }
 
     // 说明
-    let note = '计算方式：' + plan.redCombos + ' 种红球组合 × ' + plan.n + ' 个蓝球 = <b>' + plan.bets +
-      ' 注</b>，每注 2 元，合计 <b>¥' + plan.cost.toFixed(2) + '</b>。';
-    if (plan.m > 6 || plan.n > 1) {
-      note += ' 该方案为复式投注，中奖面更宽但投入同步放大，请量力而行。';
+    let note;
+    if (isSingleMode) {
+      note = '计算方式：按评分挑出 ' + plan.count + ' 注互相差异化的 6 红 + 1 蓝单式，每注 2 元，合计 <b>¥' +
+        (plan.count * PRICE).toFixed(2) + '</b>。想加大中奖面可选红球/蓝球个数超过标准值切换为复式。';
+    } else {
+      note = '计算方式：' + plan.redCombos + ' 种红球组合 × ' + plan.n + ' 个蓝球 = <b>' + plan.bets +
+        ' 注</b>，每注 2 元，合计 <b>¥' + plan.cost.toFixed(2) + '</b>。' +
+        '下方按推荐组数拆出 ' + plan.count + ' 注单式参考（每注 2 元）。复式中奖面更宽但投入同步放大，请量力而行。';
     }
     if (bt) {
       note += '<br>近 ' + bt.cnt + ' 期回测：按本策略选中 <b>' + plan.m + '</b> 个红球时，平均命中 <b>' +
@@ -730,7 +779,7 @@ if (typeof module !== 'undefined' && module.exports) {
     renderMatrix('#matrixBlue', st.blueFreq, st.blueOmis, BLUE_MAX, false);
     drawSumChart();
     if ($('#result').classList.contains('show')) {
-      try { renderResult(makePlan(DRAWS, state.strategy, state.reds, state.blues), true); } catch (e) { console.error(e); }
+      try { renderResult(makePlan(DRAWS, state.strategy, state.reds, state.blues, state.count), true); } catch (e) { console.error(e); }
     }
   }
 
@@ -857,7 +906,7 @@ if (typeof module !== 'undefined' && module.exports) {
       btn.disabled = true;
       setTimeout(function () {
         try {
-          renderResult(makePlan(DRAWS, state.strategy, state.reds, state.blues));
+          renderResult(makePlan(DRAWS, state.strategy, state.reds, state.blues, state.count));
         } catch (e) {
           console.error(e);
           alert('计算出错：' + e.message);
