@@ -742,6 +742,11 @@ if (typeof module !== 'undefined' && module.exports) {
     ['代理2', 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(CWL_API)],
   ];
   const RAW_FALLBACK = 'https://raw.githubusercontent.com/GZAlex2020/SSQV2/main/draws.json';
+  const CDN_FALLBACK = 'https://cdn.jsdelivr.net/gh/GZAlex2020/SSQV2@main/draws.json';
+  const REPO_SOURCES = [
+    ['仓库CDN', CDN_FALLBACK],
+    ['仓库原始文件', RAW_FALLBACK],
+  ];
 
   function parseCwl(data) {
     if (!data || data.state !== 0 || !Array.isArray(data.result) || !data.result.length) {
@@ -791,18 +796,20 @@ if (typeof module !== 'undefined' && module.exports) {
       }
     }
     // 兜底: 仓库自带 draws.json(配合 GitHub Actions 自动更新,CORS 放行)
-    try {
-      const arr = await fetchJson(RAW_FALLBACK + '?t=' + Date.now(), 9000);
-      if (Array.isArray(arr) && arr.length) {
-        const recs = arr.map(x => Array.isArray(x)
-          ? { i: x[0], d: x[1], r: x[2], b: x[3] }
-          : { i: x.i, d: x.d, r: x.r, b: x.b });
-        validateRecs(recs);
-        console.log('数据源成功: 仓库兜底');
-        return recs.sort((a, b) => a.i.localeCompare(b.i));
+    for (const [name, url] of REPO_SOURCES) {
+      try {
+        const arr = await fetchJson(url + '?t=' + Date.now(), 9000);
+        if (Array.isArray(arr) && arr.length) {
+          const recs = arr.map(x => Array.isArray(x)
+            ? { i: x[0], d: x[1], r: x[2], b: x[3] }
+            : { i: x.i, d: x.d, r: x.r, b: x.b });
+          validateRecs(recs);
+          console.log('数据源成功: ' + name);
+          return recs.sort((a, b) => a.i.localeCompare(b.i));
+        }
+      } catch (e) {
+        console.warn('数据源失败[' + name + ']: ' + e.message);
       }
-    } catch (e) {
-      console.warn('数据源失败[仓库兜底]: ' + e.message);
     }
     return null;
   }
@@ -818,7 +825,13 @@ if (typeof module !== 'undefined' && module.exports) {
     setSync('正在联网检查最新数据…', 'loading');
     const recs = await fetchLatest();
     if (!recs) {
-      setSync('在线更新失败,当前为内置数据(' + cur.i + ' 期 · ' + cur.d + '),点击重试', 'fail');
+      // 内置数据由 Actions 保持更新:够新则视为正常,过期才警示
+      const ageDays = Math.floor((Date.now() - new Date(cur.d + 'T00:00:00')) / 86400000);
+      if (ageDays <= 4) {
+        setSync('已是最新(' + cur.i + ' 期 · ' + cur.d + '),点击重新检查', 'ok');
+      } else {
+        setSync('在线更新失败,内置数据(' + cur.i + ' 期)已 ' + ageDays + ' 天未更新,点击重试', 'fail');
+      }
       return;
     }
     const latest = recs[recs.length - 1];
