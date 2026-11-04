@@ -840,7 +840,7 @@ if (typeof module !== 'undefined' && module.exports) {
   /* ---------- 渲染结果 ---------- */
   function renderResult(plan, noScroll) {
     const bt = backtest(DRAWS, state.strategy, state.reds, state.blues, 30);
-    const isSingleMode = (plan.m === 6);          // 只有一种红球组合时按单式推荐展示
+    const isSingleMode = (plan.m === 6 && plan.n === 1);  // 仅 6红+1蓝 按单式推荐展示; 6红+多蓝 仍是复式
     const pSingle = pWinSingle();
     const pPlanExact = pWinCompound(plan.m, plan.n);
     const pGroup = simulateWinRate(plan.singles, 120000);   // N 注合计中奖率(模拟)
