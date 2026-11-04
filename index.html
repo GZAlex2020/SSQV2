@@ -120,6 +120,28 @@ body{
 .single .price{margin-left:auto;text-align:right}
 .single .price b{font-size:15px;color:#e23b3b;font-variant-numeric:tabular-nums}
 .single .price span{display:block;font-size:11.5px;color:#8b95a7}
+.odds{font-size:11.5px;font-weight:700;color:#0b8f4d;background:#eafaf1;border:1px solid #c9f0da;
+  border-radius:20px;padding:2px 10px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.odds.hl{color:#1b4ecb;background:#eef3ff;border-color:#d5e2ff}
+
+/* 中奖率对比表 */
+.rate-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:2px}
+.rate-table th{text-align:left;padding:8px 10px;font-size:12px;color:#6b7688;background:#f8fafd;
+  border-bottom:1px solid #eef1f7;white-space:nowrap;font-weight:700}
+.rate-table td{padding:9px 10px;border-bottom:1px solid #f4f6fb;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rate-table tr:last-child td{border-bottom:0}
+.rate-table td.p{color:#e23b3b;font-weight:800}
+.rate-table td.d{color:#0b8f4d;font-weight:700;font-size:12.5px}
+.rate-table tr.cur td{background:#fff7f4}
+.rate-wrap{border:1px solid #eef1f7;border-radius:14px;overflow:hidden}
+
+/* 真相说明卡 */
+.truth{display:grid;gap:10px}
+.truth .row{display:flex;gap:11px;background:#fbfcfe;border:1px solid #eaeff7;border-radius:13px;padding:12px 14px}
+.truth .ic{width:24px;height:24px;border-radius:8px;flex:none;display:flex;align-items:center;justify-content:center;
+  font-size:12.5px;font-weight:800;color:#fff;background:linear-gradient(135deg,#e23b3b,#f0663a)}
+.truth .tx{font-size:13px;color:#4a5568;line-height:1.65}
+.truth .tx b{color:#1c2434}
 
 /* ---------- Matrix ---------- */
 .matrix{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(58px,1fr))}
@@ -203,6 +225,29 @@ tbody tr:hover{background:#fafcff}
     <button class="btn-go" id="btnGo">开 始 计 算</button>
   </section>
 
+  <section class="card">
+    <h2>推荐的号码，怎样才能更准？</h2>
+    <div class="hint">先说结论：选号方法改变不了单注中奖率，能改变的只有“覆盖多少注”。</div>
+    <div class="truth">
+      <div class="row"><div class="ic">1</div><div class="tx">
+        每注 6 红 + 1 蓝的中奖率恒定为 <b>6.71%</b>（任意奖等），一等奖 <b>1 / 17,721,088</b>。
+        无论用热号、冷号、遗漏还是任何算法，这个数字都不会变——因为每期开奖都是独立随机事件。
+      </div></div>
+      <div class="row"><div class="ic">2</div><div class="tx">
+        唯一能真正提高中奖率的办法是<b>覆盖更多号码</b>：多买 1 个红球，注数 ×(m+1)/(m-5)、金额同步上涨；
+        多买 1 个蓝球，注数 ×(n+1)/n。中奖率提升很小，投入却是成倍增长。
+      </div></div>
+      <div class="row"><div class="ic">3</div><div class="tx">
+        本页的“推理”只是把历史统计当作<b>选号偏好</b>，用来避免所有注都挤在同一批号码上，
+        真正起作用的是<b>号码分散度</b>（本工具已强制每注之间最多重叠 4 个号）。
+      </div></div>
+      <div class="row"><div class="ic">4</div><div class="tx">
+        双色球返奖率约 <b>51%</b>，长期期望是每投 2 元平均收回约 1 元。
+        把它当娱乐，设好预算，别追号——这是唯一“稳赚”的策略。
+      </div></div>
+    </div>
+  </section>
+
   <section class="card" id="result">
     <div class="res-head">
       <h2>推荐号码</h2>
@@ -226,6 +271,13 @@ tbody tr:hover{background:#fafcff}
     </div>
 
     <div class="cost" id="resCost"></div>
+
+    <div class="grp" id="rateGrp">
+      <div class="gt">中奖率对比 · 多选号码确实能提高中奖率，但金额涨得更快</div>
+      <div class="rate-wrap">
+        <table class="rate-table" id="rateTable"></table>
+      </div>
+    </div>
     <div class="note" id="resNote"></div>
   </section>
 
@@ -286,6 +338,58 @@ function comb(n, k) {
   let r = 1;
   for (let i = 1; i <= k; i++) r = r * (n - k + i) / i;
   return Math.round(r);
+}
+
+/* ==================== 中奖概率（组合数学精确值） ==================== */
+/* 红球命中>=4个的组合数（蓝球未中时唯一能中奖的情形） */
+const RED_HI_COMBOS = (function () {
+  let s = 0;
+  for (let k = 4; k <= 6; k++) s += comb(6, k) * comb(27, 6 - k);
+  return s;
+})();
+
+/* 单注（6红+1蓝）中任意奖等的概率：蓝球命中必中奖；蓝球未中需命中4红以上 */
+function pWinSingle() {
+  return 1 / 16 + (15 / 16) * (RED_HI_COMBOS / comb(33, 6));
+}
+
+/* 复式（m红+n蓝）中任意奖等的概率（精确）。
+   蓝球命中 -> 任意红球组合都中奖；蓝球未中 -> 需与所选红球交集>=4 */
+function pWinCompound(m, n) {
+  let noWin = 0;
+  for (let j = 0; j <= 3; j++) noWin += comb(m, j) * comb(33 - m, 6 - j);
+  const pRedWin = 1 - noWin / comb(33, 6);
+  return n / 16 + (1 - n / 16) * pRedWin;
+}
+
+/* 中一等奖概率 */
+function pJackpot(m, n) {
+  return comb(m, 6) / comb(33, 6) * (n / 16);
+}
+
+/* 多注单式的合计中奖率：用蒙特卡洛估算（注间号码重叠导致不独立，不能简单相乘） */
+function simulateWinRate(singles, trials) {
+  if (!singles || !singles.length) return 0;
+  trials = trials || 120000;
+  const blueSet = new Set(singles.map(s => s.blue));
+  const pBlue = blueSet.size / 16;
+  const redSets = singles.map(s => s.red);
+  let win = 0;
+  for (let t = 0; t < trials; t++) {
+    if (Math.random() < pBlue) { win++; continue; }   // 蓝球命中即中奖
+    const r = [];
+    while (r.length < 6) {
+      const v = 1 + Math.floor(Math.random() * 33);
+      if (r.indexOf(v) < 0) r.push(v);
+    }
+    for (let i = 0; i < redSets.length; i++) {
+      let c = 0;
+      const rs = redSets[i];
+      for (let j = 0; j < 6; j++) if (r.indexOf(rs[j]) >= 0) c++;
+      if (c >= 4) { win++; break; }
+    }
+  }
+  return win / trials;
 }
 
 /* 统计：频次 / 遗漏 / 近期频次 / 平均和值 */
@@ -521,7 +625,7 @@ function backtest(draws, strategy, m, n, periods) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { comb, buildStats, scoreReds, scoreBlues, pickReds, pickBlues, makePlan, backtest, makeSingles };
+  module.exports = { comb, buildStats, scoreReds, scoreBlues, pickReds, pickBlues, makePlan, backtest, makeSingles, pWinSingle, pWinCompound, pJackpot, simulateWinRate };
 }
 /* ==================== ENGINE-END ==================== */
 
@@ -691,10 +795,56 @@ if (typeof module !== 'undefined' && module.exports) {
     $('#dataMeta').textContent = '共 ' + DRAWS.length + ' 期：' + first.i + '（' + first.d + '） ~ ' + last.i + '（' + last.d + '）';
   }
 
+  /* ---------- 中奖率辅助 ---------- */
+  const pct = p => (p * 100).toFixed(2) + '%';
+  const oneIn = p => p > 0 ? '1 / ' + Math.round(1 / p).toLocaleString('en-US') : '—';
+
+  /* 中奖率对比表：当前方案 vs 多选 1 红 / 1 蓝 */
+  function renderRateTable(plan, pPlan) {
+    const rows = [];
+    const push = (label, m, n, cur, p, bets, cost) => {
+      rows.push({
+        label, m, n, cur: !!cur,
+        p: p != null ? p : pWinCompound(m, n),
+        bets: bets != null ? bets : comb(m, 6) * n,
+        cost: cost != null ? cost : comb(m, 6) * n * PRICE
+      });
+    };
+    push('当前方案（' + plan.m + ' 红 + ' + plan.n + ' 蓝）', plan.m, plan.n, true,
+      pPlan, plan.bets, plan.cost);
+    if (plan.m < 12) push('红球 + 1 个（' + (plan.m + 1) + ' + ' + plan.n + '）', plan.m + 1, plan.n);
+    if (plan.n < 5) push('蓝球 + 1 个（' + plan.m + ' + ' + (plan.n + 1) + '）', plan.m, plan.n + 1);
+    if (plan.n < 4) push('蓝球 + 2 个（' + plan.m + ' + ' + (plan.n + 2) + '）', plan.m, plan.n + 2);
+    if (plan.m < 12 && plan.n < 5) push('红球 + 1、蓝球 + 1（' + (plan.m + 1) + ' + ' + (plan.n + 1) + '）', plan.m + 1, plan.n + 1);
+
+    const base = rows[0];
+    let html = '<thead><tr><th>方案</th><th>注数</th><th>合计金额</th><th>中奖率（任意奖等）</th><th>提升</th></tr></thead><tbody>';
+    rows.forEach(r => {
+      const delta = r.cur ? '—' : '+' + ((r.p - base.p) * 100).toFixed(2) + '%';
+      const mult = r.cur ? '' : '（成本 ×' + (r.cost / base.cost).toFixed(1) + '）';
+      html += '<tr' + (r.cur ? ' class="cur"' : '') + '>' +
+        '<td>' + r.label + '</td>' +
+        '<td>' + r.bets.toLocaleString('en-US') + ' 注</td>' +
+        '<td>¥' + r.cost.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + '</td>' +
+        '<td class="p">' + pct(r.p) + '</td>' +
+        '<td class="d">' + delta + '<span style="color:#98a2b3;font-weight:500">' + mult + '</span></td>' +
+        '</tr>';
+    });
+    html += '</tbody>';
+    $('#rateTable').innerHTML = html;
+  }
+
   /* ---------- 渲染结果 ---------- */
   function renderResult(plan, noScroll) {
     const bt = backtest(DRAWS, state.strategy, state.reds, state.blues, 30);
-    const isSingleMode = (plan.m === 6 && plan.n === 1);
+    const isSingleMode = (plan.m === 6);          // 只有一种红球组合时按单式推荐展示
+    const pSingle = pWinSingle();
+    const pPlanExact = pWinCompound(plan.m, plan.n);
+    const pGroup = simulateWinRate(plan.singles, 120000);   // N 注合计中奖率(模拟)
+    const pPlan = isSingleMode ? pGroup : pPlanExact;
+    const pJack = isSingleMode
+      ? plan.singles.length / 17721088
+      : pJackpot(plan.m, plan.n);
 
     $('#resBadge').textContent = STRAT_NAME[state.strategy] + ' · ' +
       (isSingleMode ? '单式 × ' + plan.count : plan.m + '红 + ' + plan.n + '蓝');
@@ -718,11 +868,14 @@ if (typeof module !== 'undefined' && module.exports) {
           s.red.map(n => ballHTML(n, 'red', 'sm')).join('') +
           ballHTML(s.blue, 'blue', 'sm') + '</span>' +
           '<span style="font-size:11.5px;color:#8b95a7">和值 ' + s.sum + ' · 奇偶 ' + odd + ':' + (6 - odd) + '</span>' +
+          '<span class="odds">中奖率 ' + pct(pSingle) + '</span>' +
           '<span class="price"><b>¥' + PRICE.toFixed(2) + '</b><span>1 注 · 每注 2 元</span></span>' +
           '</div>';
       }).join('');
       $('#singlesTotal').innerHTML = '推荐合计：<b>' + plan.singles.length + ' 注</b> × 每注 ' +
-        PRICE.toFixed(2) + ' 元 = <b>¥' + (plan.singles.length * PRICE).toFixed(2) + '</b>';
+        PRICE.toFixed(2) + ' 元 = <b>¥' + (plan.singles.length * PRICE).toFixed(2) + '</b>' +
+        ' ｜ 这 ' + plan.singles.length + ' 注合计中奖率约 <b>' + pct(pGroup) + '</b>' +
+        '（12 万次模拟，注间号码有重叠所以不是单注概率简单相加）';
     } else {
       $('#singleGrp').style.display = 'none';
     }
@@ -734,7 +887,13 @@ if (typeof module !== 'undefined' && module.exports) {
           plan.count + ' 注（6 红 + 1 蓝）</div></div>' +
         '<div class="item hl"><div class="k">每注单价</div><div class="v">¥' + PRICE.toFixed(2) + '</div></div>' +
         '<div class="item hl"><div class="k">合计金额</div><div class="v">¥' +
-          (plan.count * PRICE).toFixed(2) + '</div></div>';
+          (plan.count * PRICE).toFixed(2) + '</div></div>' +
+        '<div class="item blue"><div class="k">单注中奖率</div><div class="v">' +
+          (pSingle * 100).toFixed(2) + '<small>%</small></div></div>' +
+        '<div class="item blue"><div class="k">' + plan.count + ' 注合计中奖率</div><div class="v">' +
+          (pGroup * 100).toFixed(2) + '<small>%</small></div></div>' +
+        '<div class="item"><div class="k">中一等奖概率</div><div class="v" style="font-size:15px">' +
+          oneIn(pJack) + '</div></div>';
     } else {
       $('#resCost').innerHTML =
         '<div class="item"><div class="k">投注方式</div><div class="v" style="font-size:16px">' +
@@ -744,18 +903,27 @@ if (typeof module !== 'undefined' && module.exports) {
         '<div class="item blue"><div class="k">总注数</div><div class="v">' + plan.bets +
           '<small>注</small></div></div>' +
         '<div class="item hl"><div class="k">每注单价</div><div class="v">¥' + PRICE.toFixed(2) + '</div></div>' +
-        '<div class="item hl"><div class="k">合计金额</div><div class="v">¥' + plan.cost.toFixed(2) + '</div></div>';
+        '<div class="item hl"><div class="k">合计金额</div><div class="v">¥' + plan.cost.toFixed(2) + '</div></div>' +
+        '<div class="item blue"><div class="k">本方案中奖率（任意奖等）</div><div class="v">' +
+          (pPlan * 100).toFixed(2) + '<small>%</small></div></div>' +
+        '<div class="item blue"><div class="k">中一等奖概率</div><div class="v" style="font-size:15px">' +
+          oneIn(pJack) + '</div></div>';
     }
+
+    renderRateTable(plan, pPlan);
 
     // 说明
     let note;
     if (isSingleMode) {
       note = '计算方式：按评分挑出 ' + plan.count + ' 注互相差异化的 6 红 + 1 蓝单式，每注 2 元，合计 <b>¥' +
-        (plan.count * PRICE).toFixed(2) + '</b>。想加大中奖面可选红球/蓝球个数超过标准值切换为复式。';
+        (plan.count * PRICE).toFixed(2) + '</b>。单注中奖率 <b>' + pct(pSingle) +
+        '</b> 是固定值（' + plan.count + ' 注合计约 <b>' + pct(pGroup) + '</b>，因号码有重叠，不能简单乘以注数）。' +
+        '想覆盖更大中奖面，可把红球/蓝球个数调到 6/1 以上切换成复式。';
     } else {
       note = '计算方式：' + plan.redCombos + ' 种红球组合 × ' + plan.n + ' 个蓝球 = <b>' + plan.bets +
-        ' 注</b>，每注 2 元，合计 <b>¥' + plan.cost.toFixed(2) + '</b>。' +
-        '下方按推荐组数拆出 ' + plan.count + ' 注单式参考（每注 2 元）。复式中奖面更宽但投入同步放大，请量力而行。';
+        ' 注</b>，每注 2 元，合计 <b>¥' + plan.cost.toFixed(2) + '</b>；本方案中奖率 <b>' + pct(pPlanExact) +
+        '</b>（组合数学精确值），中一等奖概率 <b>' + oneIn(pJack) + '</b>。' +
+        '下方 ' + plan.count + ' 注单式参考合计中奖率约 ' + pct(pGroup) + '（模拟估算）。复式中奖面更宽但投入同步放大，请量力而行。';
     }
     if (bt) {
       note += '<br>近 ' + bt.cnt + ' 期回测：按本策略选中 <b>' + plan.m + '</b> 个红球时，平均命中 <b>' +
