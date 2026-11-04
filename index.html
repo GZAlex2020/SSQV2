@@ -98,6 +98,9 @@ body{
   background:linear-gradient(135deg,#fff1ee,#ffe4dd);color:#e23b3b;border:1px solid #ffd6cc}
 .grp{margin-top:18px}
 .grp .gt{font-size:12.5px;font-weight:700;color:#7b8698;margin-bottom:9px;letter-spacing:.5px}
+.grp .gt .gt-price{display:inline-block;margin-left:8px;padding:2px 10px;border-radius:12px;
+  background:#fff2f0;border:1px solid #ffd9d3;color:#e23b3b;font-size:11.5px;letter-spacing:0;
+  font-weight:700;font-variant-numeric:tabular-nums;vertical-align:1px}
 
 .cost{display:grid;grid-template-columns:repeat(auto-fit,minmax(146px,1fr));gap:12px;margin-top:20px}
 .cost .item{background:#f7f9fd;border:1px solid #e9eef7;border-radius:14px;padding:13px 15px}
@@ -255,7 +258,7 @@ tbody tr:hover{background:#fafcff}
     </div>
 
     <div class="grp" id="compoundGrp">
-      <div class="gt">复式主推荐 · 红球</div>
+      <div class="gt">复式主推荐 · 红球 <span class="gt-price" id="compoundPrice"></span></div>
       <div class="balls-row" id="resReds"></div>
     </div>
 
@@ -853,6 +856,10 @@ if (typeof module !== 'undefined' && module.exports) {
     $('#compoundGrpB').style.display = isSingleMode ? 'none' : '';
     $('#resReds').innerHTML = plan.reds.map(n => ballHTML(n, 'red')).join('');
     $('#resBlues').innerHTML = plan.blues.map(n => ballHTML(n, 'blue')).join('');
+    // 复式标题旁的价格徽标: 组合数 × 蓝球数 = 总注数 · 合计金额
+    $('#compoundPrice').textContent = 'C(' + plan.m + ',6)=' + plan.redCombos +
+      ' 组 × ' + plan.n + ' 蓝 = ' + plan.bets + ' 注 · 每注 ¥' + PRICE.toFixed(2) +
+      ' · 合计 ¥' + plan.cost.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
     // 推荐号码(单式)
     if (plan.singles.length) {
