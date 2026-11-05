@@ -87,6 +87,10 @@ body{
   box-shadow:0 13px 28px rgba(226,59,59,.33);transition:.18s;font-family:inherit}
 .btn-go:hover{filter:brightness(1.05);transform:translateY(-1px)}
 .btn-go:active{transform:translateY(1px);box-shadow:0 6px 16px rgba(226,59,59,.3)}
+/* 二次分析 */
+.refine-row{display:flex;align-items:center;gap:12px;margin:10px 0 2px;flex-wrap:wrap}
+.refine-row .rl{font-size:12.5px;font-weight:700;color:#7b8698;letter-spacing:.5px;white-space:nowrap}
+#btnRefine{width:auto;margin-top:14px;padding:11px 26px;font-size:14px;letter-spacing:1px}
 
 /* ---------- Result ---------- */
 #result{display:none}
@@ -265,6 +269,30 @@ tbody tr:hover{background:#fafcff}
     <div class="grp" id="compoundGrpB">
       <div class="gt">复式主推荐 · 蓝球</div>
       <div class="balls-row" id="resBlues"></div>
+    </div>
+
+    <div class="grp" id="refineGrp" style="display:none">
+      <div class="gt">二次分析 · 在上方推荐号码中缩小范围</div>
+      <div class="hint" style="margin-bottom:6px">
+        对已推荐的号码池重新评分，从中挑出更精的一批（例如推荐了 12 红，可再缩到 8 红）。
+        只在上方推荐范围内筛选，不会引入新号码。
+      </div>
+      <div class="refine-row" id="refineRowRed">
+        <span class="rl">红球缩至</span>
+        <div class="seg strategy" id="segRRed"></div>
+      </div>
+      <div class="refine-row" id="refineRowBlue">
+        <span class="rl">蓝球缩至</span>
+        <div class="seg blue" id="segRBlue"></div>
+      </div>
+      <button class="btn-go" id="btnRefine">开 始 二 次 分 析</button>
+
+      <div id="refineOut" style="display:none">
+        <div class="gt" style="margin-top:18px">二次推荐结果 <span class="gt-price" id="refinePrice"></span></div>
+        <div class="balls-row" id="refReds"></div>
+        <div class="balls-row" id="refBlues" style="margin-top:9px"></div>
+        <div class="note" id="refNote" style="margin-top:11px"></div>
+      </div>
     </div>
 
     <div class="grp" id="singleGrp">
@@ -574,6 +602,17 @@ function makeSingles(reds, blues, rs, st, count, m) {
   }));
 }
 
+/* 二次分析：在「已推荐」的号码池内重新评分缩小范围（保留三区覆盖/奇偶均衡修正） */
+function refineReds(reds, rs, targetM) {
+  const pool = rs.filter(x => reds.indexOf(x.n) >= 0);
+  return pickReds(pool, Math.min(targetM, reds.length));
+}
+
+function refineBlues(blues, bs, targetN) {
+  const pool = bs.filter(x => blues.indexOf(x.n) >= 0);
+  return pickBlues(pool, Math.min(targetN, blues.length));
+}
+
 /* 生成完整方案 */
 function makePlan(draws, strategy, m, n, count) {
   count = Math.max(1, count || 3);
@@ -628,7 +667,7 @@ function backtest(draws, strategy, m, n, periods) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { comb, buildStats, scoreReds, scoreBlues, pickReds, pickBlues, makePlan, backtest, makeSingles, pWinSingle, pWinCompound, pJackpot, simulateWinRate };
+  module.exports = { comb, buildStats, scoreReds, scoreBlues, pickReds, pickBlues, makePlan, backtest, makeSingles, refineReds, refineBlues, pWinSingle, pWinCompound, pJackpot, simulateWinRate };
 }
 /* ==================== ENGINE-END ==================== */
 
@@ -837,6 +876,72 @@ if (typeof module !== 'undefined' && module.exports) {
     $('#rateTable').innerHTML = html;
   }
 
+  /* ---------- 二次分析：在已推荐号码池内缩小范围 ---------- */
+  const refSel = { red: 8, blue: 1 };
+
+  function buildRefineSegs(plan) {
+    const segR = $('#segRRed'), segB = $('#segRBlue');
+    segR.innerHTML = ''; segB.innerHTML = '';
+    $('#refineOut').style.display = 'none';
+    const showRed = plan.m > 6, showBlue = plan.n > 1;
+    $('#refineRowRed').style.display = showRed ? '' : 'none';
+    $('#refineRowBlue').style.display = showBlue ? '' : 'none';
+    $('#refineGrp').style.display = (showRed || showBlue) ? '' : 'none';
+    if (showRed) {
+      refSel.red = Math.min(Math.max(refSel.red, 6), plan.m - 1);
+      for (let i = 6; i <= plan.m - 1; i++) {
+        const b = document.createElement('button');
+        b.textContent = i + ' 个'; b.dataset.v = i;
+        if (i === refSel.red) b.className = 'on';
+        b.onclick = () => {
+          refSel.red = i;
+          [].forEach.call(segR.children, c => c.className = (+c.dataset.v === i ? 'on' : ''));
+        };
+        segR.appendChild(b);
+      }
+    }
+    if (showBlue) {
+      refSel.blue = Math.min(Math.max(refSel.blue, 1), plan.n - 1);
+      for (let i = 1; i <= plan.n - 1; i++) {
+        const b = document.createElement('button');
+        b.textContent = i + ' 个'; b.dataset.v = i;
+        if (i === refSel.blue) b.className = 'on';
+        b.onclick = () => {
+          refSel.blue = i;
+          [].forEach.call(segB.children, c => c.className = (+c.dataset.v === i ? 'on' : ''));
+        };
+        segB.appendChild(b);
+      }
+    }
+    if (showRed || showBlue) {
+      $('#btnRefine').onclick = function () { runRefine(plan); };
+    }
+  }
+
+  function runRefine(plan) {
+    const rs = scoreReds(plan.st, plan.strategy);
+    const bs = scoreBlues(plan.st, plan.strategy);
+    const rr = refineReds(plan.reds, rs, refSel.red);
+    const bb = refineBlues(plan.blues, bs, refSel.blue);
+    const bets = comb(rr.length, 6) * bb.length;
+    const cost = bets * PRICE;
+    const pNew = pWinCompound(rr.length, bb.length);
+    const pOld = pWinCompound(plan.m, plan.n);
+
+    $('#refReds').innerHTML = rr.map(n => ballHTML(n, 'red')).join('');
+    $('#refBlues').innerHTML = bb.map(n => ballHTML(n, 'blue')).join('');
+    $('#refinePrice').textContent = 'C(' + rr.length + ',6)=' + comb(rr.length, 6) +
+      ' 组 × ' + bb.length + ' 蓝 = ' + bets + ' 注 · 每注 ¥' + PRICE.toFixed(2) +
+      ' · 合计 ¥' + cost.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const saved = plan.cost - cost;
+    $('#refNote').innerHTML =
+      '在 ' + plan.m + ' 红 + ' + plan.n + ' 蓝的推荐池内按综合评分缩小到 <b>' + rr.length +
+      ' 红 + ' + bb.length + ' 蓝</b>：注数 ' + plan.bets + ' → <b>' + bets + '</b>，金额 ¥' +
+      plan.cost.toFixed(2) + ' → <b>¥' + cost.toFixed(2) + '</b>（省 ¥' + saved.toFixed(2) +
+      '），中奖率 ' + pct(pOld) + ' → <b>' + pct(pNew) + '</b>。号码全部来自上方原推荐，未引入新号。';
+    $('#refineOut').style.display = '';
+  }
+
   /* ---------- 渲染结果 ---------- */
   function renderResult(plan, noScroll) {
     const bt = backtest(DRAWS, state.strategy, state.reds, state.blues, 30);
@@ -860,6 +965,8 @@ if (typeof module !== 'undefined' && module.exports) {
     $('#compoundPrice').textContent = 'C(' + plan.m + ',6)=' + plan.redCombos +
       ' 组 × ' + plan.n + ' 蓝 = ' + plan.bets + ' 注 · 每注 ¥' + PRICE.toFixed(2) +
       ' · 合计 ¥' + plan.cost.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    // 二次分析面板(复式且可缩小时显示)
+    buildRefineSegs(plan);
 
     // 推荐号码(单式)
     if (plan.singles.length) {
