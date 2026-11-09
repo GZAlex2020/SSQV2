@@ -91,6 +91,64 @@ body{
 .refine-row{display:flex;align-items:center;gap:12px;margin:10px 0 2px;flex-wrap:wrap}
 .refine-row .rl{font-size:12.5px;font-weight:700;color:#7b8698;letter-spacing:.5px;white-space:nowrap}
 #btnRefine{width:auto;margin-top:14px;padding:11px 26px;font-size:14px;letter-spacing:1px}
+/* 账号系统 */
+.topbar{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:12px 0 0}
+.topbar .chip{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid #e9eef7;
+  border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;color:#4a5568}
+.topbar .chip.admin{background:#fff7e6;border-color:#ffd591;color:#ad6800}
+.topbar .chip .dot{width:8px;height:8px;border-radius:50%;background:#2fa860}
+.topbar .tbtn{border:1.5px solid #e3e8f2;background:#fff;border-radius:20px;padding:6px 14px;
+  font-size:12.5px;font-weight:700;color:#7b8698;cursor:pointer;transition:.15s}
+.topbar .tbtn:hover{border-color:#e23b3b;color:#e23b3b}
+.auth-overlay{position:fixed;inset:0;background:rgba(15,23,42,.58);backdrop-filter:blur(5px);
+  z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+.auth-card{background:#fff;border-radius:20px;padding:30px 28px;width:370px;max-width:100%;
+  box-shadow:0 30px 70px rgba(0,0,0,.3)}
+.auth-card h3{margin:0 0 4px;font-size:19px;color:#1f2a3d;text-align:center}
+.auth-card .sub{font-size:12.5px;color:#8b95a7;text-align:center;margin-bottom:18px}
+.auth-tabs{display:flex;gap:8px;margin-bottom:16px}
+.auth-tabs button{flex:1;border:1.5px solid #e3e8f2;background:#fff;border-radius:11px;padding:9px;
+  font-size:14px;font-weight:700;color:#7b8698;cursor:pointer}
+.auth-tabs button.on{background:linear-gradient(135deg,#e23b3b,#f0663a);border-color:transparent;color:#fff}
+.auth-card input{width:100%;box-sizing:border-box;border:1.5px solid #e3e8f2;border-radius:11px;
+  padding:11px 13px;font-size:14px;margin-bottom:11px;font-family:inherit}
+.auth-card input:focus{outline:0;border-color:#e23b3b}
+.auth-card .go{width:100%;border:0;border-radius:12px;padding:12px;font-size:15px;font-weight:800;
+  color:#fff;cursor:pointer;background:linear-gradient(135deg,#e23b3b,#f0663a);letter-spacing:1px}
+.auth-card .err{color:#e23b3b;font-size:12.5px;min-height:16px;margin:2px 0 8px;text-align:center}
+.btn-buy{border:1.5px solid #e23b3b;color:#e23b3b;background:#fff;border-radius:10px;padding:5px 13px;
+  font-size:12.5px;font-weight:700;cursor:pointer;transition:.15s;white-space:nowrap}
+.btn-buy:hover{background:#e23b3b;color:#fff}
+.btn-buy.done{border-color:#2fa860;color:#2fa860;cursor:default}
+.pur-item{background:#f7f9fd;border:1px solid #e9eef7;border-radius:14px;padding:14px 16px;margin-bottom:12px}
+.pur-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pur-head .pt{font-size:13px;font-weight:800;color:#1f2a3d}
+.pur-head .pm{font-size:12px;color:#8b95a7}
+.pur-head .cost{margin-left:auto;font-size:13.5px;font-weight:800;color:#e23b3b}
+.pur-judge{display:flex;align-items:center;gap:9px;margin-top:11px;flex-wrap:wrap}
+.pur-judge input{border:1.5px solid #e3e8f2;border-radius:10px;padding:8px 11px;font-size:13px;
+  width:120px;font-family:inherit;font-variant-numeric:tabular-nums}
+.pur-judge input:focus{outline:0;border-color:#e23b3b}
+.pur-judge .jbtn{border:0;border-radius:10px;padding:8px 15px;font-size:12.5px;font-weight:700;
+  color:#fff;background:#3b82f6;cursor:pointer}
+.pur-result{margin-top:10px;border-radius:11px;padding:11px 13px;font-size:13px;line-height:1.75}
+.pur-result.win{background:#f0fdf4;border:1px solid #bbf7d0;color:#14532d}
+.pur-result.lose{background:#f8fafc;border:1px solid #e2e8f0;color:#64748b}
+.pur-result b.big{font-size:16px;color:#e23b3b}
+.lv-tag{display:inline-block;border-radius:8px;padding:1px 8px;font-size:11.5px;font-weight:800;margin-right:6px}
+.lv-1{background:#fef3c7;color:#92400e}.lv-2{background:#ffe4e6;color:#9f1239}
+.lv-3{background:#e0f2fe;color:#075985}.lv-4{background:#ecfccb;color:#3f6212}
+.lv-5{background:#f3e8ff;color:#6b21a8}.lv-6{background:#f1f5f9;color:#475569}
+.lb-table{width:100%;border-collapse:collapse;font-size:13.5px}
+.lb-table th{text-align:left;padding:9px 10px;color:#7b8698;font-size:12px;border-bottom:2px solid #e9eef7}
+.lb-table td{padding:10px;border-bottom:1px solid #eef2f9;color:#1f2a3d;font-variant-numeric:tabular-nums}
+.lb-table tr.me td{background:#fff7f5}
+.lb-rank{font-weight:800;width:44px}
+.lb-rank.r1{color:#d97706}.lb-rank.r2{color:#64748b}.lb-rank.r3{color:#b45309}
+.toast{position:fixed;left:50%;bottom:34px;transform:translateX(-50%) translateY(20px);opacity:0;
+  background:#1f2a3d;color:#fff;border-radius:12px;padding:11px 20px;font-size:13.5px;font-weight:600;
+  z-index:300;transition:.25s;pointer-events:none;max-width:80vw}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* ---------- Result ---------- */
 #result{display:none}
@@ -198,6 +256,28 @@ tbody tr:hover{background:#fafcff}
 <body>
 <div class="wrap">
 
+  <div class="topbar" id="topbar" style="display:none">
+    <span class="chip" id="chipUser"><span class="dot"></span><span id="chipName"></span></span>
+    <span class="chip admin" id="chipAdmin" style="display:none">管理员</span>
+    <button class="tbtn" id="btnLogout">退出登录</button>
+  </div>
+
+  <div class="auth-overlay" id="authOverlay" style="display:none">
+    <div class="auth-card">
+      <h3>双色球智能分析</h3>
+      <div class="sub">登录后可保存购买记录、查看中奖详情与排行榜</div>
+      <div class="auth-tabs">
+        <button class="on" id="tabLogin">登 录</button>
+        <button id="tabReg">注 册</button>
+      </div>
+      <input id="authUser" placeholder="用户名" maxlength="20" autocomplete="username">
+      <input id="authPass" type="password" placeholder="密码（至少 6 位）" maxlength="40" autocomplete="current-password">
+      <input id="authPass2" type="password" placeholder="确认密码（仅注册需要）" maxlength="40" style="display:none" autocomplete="new-password">
+      <div class="err" id="authErr"></div>
+      <button class="go" id="authGo">登 录</button>
+    </div>
+  </div>
+
   <header class="hero">
     <h1>双色球智能分析</h1>
     <div class="sub">基于最近 <b id="heroN">100</b> 期真实开奖数据 · 冷热号 / 遗漏值 / 区间分布综合推理</div>
@@ -269,6 +349,10 @@ tbody tr:hover{background:#fafcff}
     <div class="grp" id="compoundGrpB">
       <div class="gt">复式主推荐 · 蓝球</div>
       <div class="balls-row" id="resBlues"></div>
+      <div id="compoundBuyRow" style="margin-top:12px">
+        <button class="btn-buy" id="btnBuyCompound">购买此方案</button>
+        <span style="font-size:11.5px;color:#8b95a7;margin-left:8px">点击记入购买记录，开奖后可判奖</span>
+      </div>
     </div>
 
     <div class="grp" id="refineGrp" style="display:none">
@@ -291,6 +375,7 @@ tbody tr:hover{background:#fafcff}
         <div class="gt" style="margin-top:18px">二次推荐结果 <span class="gt-price" id="refinePrice"></span></div>
         <div class="balls-row" id="refReds"></div>
         <div class="balls-row" id="refBlues" style="margin-top:9px"></div>
+        <div style="margin-top:12px"><button class="btn-buy" id="btnBuyRefine">购买此二次推荐</button></div>
         <div class="note" id="refNote" style="margin-top:11px"></div>
       </div>
     </div>
@@ -311,6 +396,29 @@ tbody tr:hover{background:#fafcff}
     </div>
     <div class="note" id="resNote"></div>
   </section>
+
+  <section class="card" id="purSection">
+    <div class="res-head">
+      <h2>购买记录</h2>
+      <div class="seg" id="purTabs" style="display:none">
+        <button class="on" id="tabMine">我的记录</button>
+        <button id="tabAll">全部用户</button>
+      </div>
+    </div>
+    <div class="hint">点推荐号码旁的「购买」把方案记入列表；开奖后在记录里输入开奖期数，系统自动判奖并记入排行榜。</div>
+    <div id="purList"></div>
+  </section>
+
+  <section class="card" id="lbSection">
+    <div class="res-head">
+      <h2>中奖排行榜</h2>
+      <div class="badge" id="lbBadge"></div>
+    </div>
+    <div class="hint">按已判奖记录的累计奖金排名，所有用户可见。一等奖/二等奖为浮动奖金，按常见金额估算显示。</div>
+    <div class="rate-wrap" id="lbWrap"></div>
+  </section>
+
+  <div class="toast" id="toast"></div>
 
   <section class="card">
     <h2>红球冷热分布（1-33）</h2>
@@ -934,6 +1042,15 @@ if (typeof module !== 'undefined' && module.exports) {
       ' 组 × ' + bb.length + ' 蓝 = ' + bets + ' 注 · 每注 ¥' + PRICE.toFixed(2) +
       ' · 合计 ¥' + cost.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     const saved = plan.cost - cost;
+    const brf = $('#btnBuyRefine');
+    brf.className = 'btn-buy';
+    brf.textContent = '购买此二次推荐（' + bets + ' 注 · ¥' + cost.toFixed(2) + '）';
+    brf.onclick = function () {
+      SSQ.buy({
+        label: '二次推荐 ' + rr.length + '红+' + bb.length + '蓝',
+        reds: rr, blues: bb, bets: bets, cost: cost
+      });
+    };
     $('#refNote').innerHTML =
       '在 ' + plan.m + ' 红 + ' + plan.n + ' 蓝的推荐池内按综合评分缩小到 <b>' + rr.length +
       ' 红 + ' + bb.length + ' 蓝</b>：注数 ' + plan.bets + ' → <b>' + bets + '</b>，金额 ¥' +
@@ -961,6 +1078,16 @@ if (typeof module !== 'undefined' && module.exports) {
     $('#compoundGrpB').style.display = isSingleMode ? 'none' : '';
     $('#resReds').innerHTML = plan.reds.map(n => ballHTML(n, 'red')).join('');
     $('#resBlues').innerHTML = plan.blues.map(n => ballHTML(n, 'blue')).join('');
+    // 复式购买按钮
+    const bcb = $('#btnBuyCompound');
+    bcb.className = 'btn-buy';
+    bcb.textContent = '购买此复式方案（' + plan.bets + ' 注 · ¥' + plan.cost.toFixed(2) + '）';
+    bcb.onclick = function () {
+      SSQ.buy({
+        label: '复式 ' + plan.m + '红+' + plan.n + '蓝 · ' + STRAT_NAME[state.strategy],
+        reds: plan.reds, blues: plan.blues, bets: plan.bets, cost: plan.cost
+      });
+    };
     // 复式标题旁的价格徽标: 组合数 × 蓝球数 = 总注数 · 合计金额
     $('#compoundPrice').textContent = 'C(' + plan.m + ',6)=' + plan.redCombos +
       ' 组 × ' + plan.n + ' 蓝 = ' + plan.bets + ' 注 · 每注 ¥' + PRICE.toFixed(2) +
@@ -984,8 +1111,16 @@ if (typeof module !== 'undefined' && module.exports) {
           '<span style="font-size:11.5px;color:#8b95a7">和值 ' + s.sum + ' · 奇偶 ' + odd + ':' + (6 - odd) + '</span>' +
           '<span class="odds">中奖率 ' + pct(pSingle) + '</span>' +
           '<span class="price"><b>¥' + PRICE.toFixed(2) + '</b><span>1 注 · 每注 2 元</span></span>' +
+          '<button class="btn-buy" data-i="' + i + '">购买</button>' +
           '</div>';
       }).join('');
+      // 每注单式的购买按钮
+      [].forEach.call(document.querySelectorAll('#resSingles .btn-buy'), btn => {
+        btn.onclick = function () {
+          const s = plan.singles[+btn.dataset.i];
+          SSQ.buy({ label: '单式 · ' + STRAT_NAME[state.strategy], reds: s.red, blues: [s.blue], bets: 1, cost: PRICE });
+        };
+      });
       $('#singlesTotal').innerHTML = '推荐合计：<b>' + plan.singles.length + ' 注</b> × 每注 ' +
         PRICE.toFixed(2) + ' 元 = <b>¥' + (plan.singles.length * PRICE).toFixed(2) + '</b>' +
         ' ｜ 这 ' + plan.singles.length + ' 注合计中奖率约 <b>' + pct(pGroup) + '</b>' +
@@ -1207,6 +1342,307 @@ if (typeof module !== 'undefined' && module.exports) {
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
+})();
+</script>
+
+<script>
+/* ==================== 账号 / 购买记录 / 判奖 / 排行榜 ====================
+   本地实现: 数据存储于浏览器 localStorage(换设备/浏览器不可共享, 清缓存会丢失) */
+(function () {
+  const LS_USERS = 'ssq_users', LS_SESSION = 'ssq_session', LS_PUR = 'ssq_purchases';
+  const ADMIN_NAME = 'Admin', ADMIN_PASS = 'Alex3344139';
+  const PRICE = 2;
+  /* 奖级: 1/2 等为浮动奖金,按常见水平估算 */
+  const PRIZE = { 1: 5000000, 2: 200000, 3: 3000, 4: 200, 5: 10, 6: 5 };
+  const LV_NAME = { 1: '一等奖', 2: '二等奖', 3: '三等奖', 4: '四等奖', 5: '五等奖', 6: '六等奖' };
+  const LV_CLS = { 1: 'lv-1', 2: 'lv-2', 3: 'lv-3', 4: 'lv-4', 5: 'lv-5', 6: 'lv-6' };
+  const FLOAT_LV = { 1: true, 2: true };
+
+  const $ = s => document.querySelector(s);
+  const fmt = n => n.toLocaleString('zh-CN');
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  function load(k, d) { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } }
+  function save(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
+
+  /* ---------- 存储 ---------- */
+  function users() { return load(LS_USERS, []); }
+  function seedAdmin() {
+    const u = users();
+    if (!u.some(x => x.name === ADMIN_NAME)) {
+      u.push({ name: ADMIN_NAME, pass: ADMIN_PASS, role: 'admin', created: Date.now() });
+      save(LS_USERS, u);
+    }
+  }
+  function session() {
+    const name = load(LS_SESSION, null);
+    if (!name) return null;
+    const u = users().find(x => x.name === name);
+    return u ? { name: u.name, role: u.role || 'user' } : null;
+  }
+  function purchases() { return load(LS_PUR, []); }
+
+  /* ---------- UI 工具 ---------- */
+  let toastTimer;
+  function toast(msg) {
+    const t = $('#toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+  }
+  function ballHTML(n, type) {
+    return '<span class="ball ' + type + '">' + String(n).padStart(2, '0') + '</span>';
+  }
+  function ballsHTML(reds, blues) {
+    return '<span class="balls-row" style="gap:5px;display:inline-flex;flex-wrap:wrap">' +
+      reds.map(n => ballHTML(n, 'red')).join('') + blues.map(n => ballHTML(n, 'blue')).join('') + '</span>';
+  }
+
+  /* ---------- 登录 / 注册 ---------- */
+  let authMode = 'login';
+  function showAuth() {
+    setMode('login');
+    $('#authUser').value = ''; $('#authPass').value = '';
+    $('#authOverlay').style.display = 'flex';
+    $('#authErr').textContent = '';
+  }
+  function hideAuth() { $('#authOverlay').style.display = 'none'; }
+  function setMode(m) {
+    authMode = m;
+    $('#tabLogin').className = m === 'login' ? 'on' : '';
+    $('#tabReg').className = m === 'reg' ? 'on' : '';
+    $('#authPass2').style.display = m === 'reg' ? '' : 'none';
+    $('#authGo').textContent = m === 'login' ? '登 录' : '注 册';
+    $('#authErr').textContent = '';
+  }
+  function doAuth() {
+    const name = $('#authUser').value.trim();
+    const pass = $('#authPass').value;
+    const err = $('#authErr');
+    if (!name) { err.textContent = '请输入用户名'; return; }
+    if (!pass || pass.length < 6) { err.textContent = '密码至少 6 位'; return; }
+    const list = users();
+    if (authMode === 'login') {
+      const u = list.find(x => x.name === name);
+      if (!u || u.pass !== pass) { err.textContent = '用户名或密码错误'; return; }
+    } else {
+      if (list.some(x => x.name === name)) { err.textContent = '用户名已存在'; return; }
+      if ($('#authPass2').value !== pass) { err.textContent = '两次密码不一致'; return; }
+      list.push({ name, pass, role: 'user', created: Date.now() });
+      save(LS_USERS, list);
+    }
+    save(LS_SESSION, name);
+    hideAuth();
+    renderUserBar();
+    renderPurchases();
+    renderLeaderboard();
+    toast('欢迎, ' + name);
+  }
+  function logout() {
+    localStorage.removeItem(LS_SESSION);
+    renderUserBar();
+    renderPurchases();
+    showAuth();
+  }
+  function renderUserBar() {
+    const s = session();
+    const bar = $('#topbar');
+    if (!s) { bar.style.display = 'none'; return; }
+    bar.style.display = '';
+    $('#chipName').textContent = s.name;
+    $('#chipAdmin').style.display = s.role === 'admin' ? '' : 'none';
+    $('#purTabs').style.display = s.role === 'admin' ? '' : 'none';
+  }
+
+  /* ---------- 判奖 ---------- */
+  function comb(n, k) {
+    if (k < 0 || k > n) return 0;
+    k = Math.min(k, n - k);
+    let r = 1;
+    for (let i = 1; i <= k; i++) r = r * (n - k + i) / i;
+    return Math.round(r);
+  }
+  function levelOf(j, b) {
+    if (j === 6 && b) return 1;
+    if (j === 6) return 2;
+    if (j === 5 && b) return 3;
+    if (j === 5 || (j === 4 && b)) return 4;
+    if (j === 4 || (j === 3 && b)) return 5;
+    if (b && j <= 2) return 6;
+    return 0;
+  }
+  /* 复式判奖: 对每个蓝球 × 每种红球命中数, 组合数加权求和 */
+  function judgePlan(p, win6, winB) {
+    const k = p.reds.filter(n => win6.indexOf(n) >= 0).length;
+    const levels = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+    let total = 0, best = 0;
+    for (const b of p.blues) {
+      const hit = (b === winB);
+      for (let j = 0; j <= 6; j++) {
+        const cnt = comb(k, j) * comb(p.reds.length - k, 6 - j);
+        if (!cnt) continue;
+        const lv = levelOf(j, hit);
+        if (lv) {
+          levels[lv] += cnt;
+          total += cnt * PRIZE[lv];
+          if (!best || lv < best) best = lv;
+        }
+      }
+    }
+    return { k, levels, total, best };
+  }
+  function findDraw(issue) {
+    const arr = (typeof DRAWS !== 'undefined' && DRAWS) || [];
+    const q = String(issue).trim();
+    return arr.find(d => String(d.i) === q) || null;
+  }
+
+  /* ---------- 购买记录 ---------- */
+  let purView = 'mine';
+  function buy(item) {
+    const s = session();
+    if (!s) { showAuth(); toast('请先登录后再购买'); return false; }
+    const list = purchases();
+    list.unshift({
+      id: Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+      user: s.name, ts: Date.now(),
+      label: item.label || '', m: item.reds.length, n: item.blues.length,
+      reds: item.reds.slice(), blues: item.blues.slice(),
+      bets: item.bets, cost: item.cost, judged: null
+    });
+    save(LS_PUR, list);
+    renderPurchases();
+    toast('已加入购买记录: ' + (item.label || '') + ' ¥' + item.cost.toFixed(2));
+    return true;
+  }
+
+  function judgePurchase(id, issue) {
+    const s = session();
+    if (!s) return;
+    const list = purchases();
+    const p = list.find(x => x.id === id);
+    if (!p) return;
+    const box = document.getElementById('jr_' + id);
+    const draw = findDraw(issue);
+    if (!draw) {
+      const arr = DRAWS || [];
+      box.innerHTML = '<div class="pur-result lose">未找到 <b>' + esc(issue) +
+        '</b> 期的开奖数据。本地缓存范围为 ' + (arr.length ? arr[0].i + ' ~ ' + arr[arr.length - 1].i : '无') +
+        '（页面会自动更新最新 100 期），请确认期号。</div>';
+      return;
+    }
+    const r = judgePlan(p, draw.r, draw.b);
+    p.judged = {
+      issue: String(draw.i), date: draw.d, win6: draw.r, winB: draw.b,
+      k: r.k, levels: r.levels, total: r.total, best: r.best, ts: Date.now()
+    };
+    save(LS_PUR, list);
+    renderPurchases();
+    renderLeaderboard();
+    if (r.total > 0) toast('恭喜! ' + LV_NAME[r.best] + ',奖金 ¥' + fmt(r.total));
+    else toast('该期未中奖');
+  }
+
+  function renderPurchases() {
+    const s = session();
+    const wrap = $('#purList');
+    $('#purSection').style.display = s ? '' : 'none';
+    if (!s) { wrap.innerHTML = ''; return; }
+    const all = purchases();
+    const list = (s.role === 'admin' && purView === 'all') ? all : all.filter(x => x.user === s.name);
+    if (!list.length) {
+      wrap.innerHTML = '<div class="hint" style="padding:8px 0">' +
+        (purView === 'all' ? '还没有任何用户的购买记录。' : '还没有购买记录，去推荐号码旁点「购买」吧。') + '</div>';
+      return;
+    }
+    wrap.innerHTML = list.map(p => {
+      let judge = '';
+      if (p.judged) {
+        const j = p.judged;
+        const lvTags = Object.keys(j.levels).filter(l => j.levels[l] > 0)
+          .map(l => '<span class="lv-tag ' + LV_CLS[l] + '">' + LV_NAME[l] + '×' + j.levels[l] + '</span>').join('');
+        judge = j.total > 0
+          ? '<div class="pur-result win">期号 <b>' + esc(j.issue) + '</b>(' + esc(j.date) + ') 开奖 ' +
+            ballsHTML(j.win6, [j.winB]) + ' ｜ 命中红球 ' + j.k + ' 个<br>' + lvTags +
+            '<br>奖金合计 <b class="big">¥' + fmt(j.total) + '</b>' +
+            (FLOAT_LV[j.best] ? ' <span style="font-size:11.5px;color:#92400e">(一/二等奖为浮动奖金,按 ¥' + fmt(PRIZE[j.best]) + ' 估算)</span>' : '') + '</div>'
+          : '<div class="pur-result lose">期号 <b>' + esc(j.issue) + '</b>(' + esc(j.date) + ') 开奖 ' +
+            ballsHTML(j.win6, [j.winB]) + ' ｜ 命中红球 ' + j.k + ' 个,蓝球' +
+            (j.winB && p.blues.indexOf(j.winB) >= 0 ? '命中' : '未中') + ' —— 未中奖</div>';
+      }
+      return '<div class="pur-item">' +
+        '<div class="pur-head"><span class="pt">' + (purView === 'all' ? esc(p.user) + ' · ' : '') + esc(p.label) + '</span>' +
+        '<span class="pm">' + p.m + '红+' + p.n + '蓝 · ' + p.bets + ' 注</span>' +
+        '<span class="pm">' + new Date(p.ts).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) + '</span>' +
+        '<span class="cost">¥' + fmt(p.cost) + '</span></div>' +
+        '<div style="margin-top:8px">' + ballsHTML(p.reds, p.blues) + '</div>' +
+        '<div class="pur-judge"><span style="font-size:12.5px;color:#7b8698">输入开奖期数判奖:</span>' +
+        '<input id="ji_' + p.id + '" placeholder="如 2026131" inputmode="numeric">' +
+        '<button class="jbtn" id="jb_' + p.id + '">自动判奖</button></div>' +
+        '<div id="jr_' + p.id + '">' + judge + '</div>' +
+        '</div>';
+    }).join('');
+    list.forEach(p => {
+      const btn = document.getElementById('jb_' + p.id);
+      if (btn) btn.onclick = () => judgePurchase(p.id, document.getElementById('ji_' + p.id).value);
+      const inp = document.getElementById('ji_' + p.id);
+      if (inp) inp.onkeydown = e => { if (e.key === 'Enter') judgePurchase(p.id, inp.value); };
+    });
+  }
+
+  /* ---------- 排行榜 ---------- */
+  function renderLeaderboard() {
+    const wrap = $('#lbWrap');
+    const all = purchases().filter(x => x.judged && x.judged.total > 0);
+    $('#lbBadge').textContent = all.length ? '共 ' + all.length + ' 条中奖记录' : '';
+    if (!all.length) {
+      wrap.innerHTML = '<div class="hint" style="padding:8px 0">暂无中奖记录。在购买记录里输入开奖期数判奖,中奖后自动上榜。</div>';
+      return;
+    }
+    const byUser = {};
+    all.forEach(p => {
+      const u = byUser[p.user] = byUser[p.user] || { total: 0, cnt: 0, best: 9, last: null };
+      u.total += p.judged.total;
+      u.cnt++;
+      if (p.judged.best < u.best) u.best = p.judged.best;
+      if (!u.last || p.judged.ts > u.last) u.last = p.judged.ts;
+    });
+    const arr = Object.keys(byUser).map(name => ({ name: name, u: byUser[name] }))
+      .sort((a, b) => b.u.total - a.u.total);
+    const me = session();
+    wrap.innerHTML = '<table class="lb-table"><thead><tr>' +
+      '<th>排名</th><th>用户</th><th>累计奖金</th><th>中奖次数</th><th>最好成绩</th></tr></thead><tbody>' +
+      arr.map((r, i) => '<tr' + (me && me.name === r.name ? ' class="me"' : '') + '>' +
+        '<td class="lb-rank r' + (i + 1 <= 3 ? i + 1 : '') + '">' + (i + 1) + '</td>' +
+        '<td>' + esc(r.name) + (me && me.name === r.name ? ' (我)' : '') + '</td>' +
+        '<td><b style="color:#e23b3b">¥' + fmt(r.u.total) + '</b></td>' +
+        '<td>' + r.u.cnt + ' 次</td>' +
+        '<td><span class="lv-tag ' + LV_CLS[r.u.best] + '">' + LV_NAME[r.u.best] + '</span></td>' +
+        '</tr>').join('') + '</tbody></table>';
+  }
+
+  /* ---------- 对外接口 ---------- */
+  window.SSQ = { buy: buy, session: session };
+
+  /* ---------- 启动 ---------- */
+  function start() {
+    seedAdmin();
+    $('#tabLogin').onclick = () => setMode('login');
+    $('#tabReg').onclick = () => setMode('reg');
+    $('#authGo').onclick = doAuth;
+    $('#authPass').onkeydown = e => { if (e.key === 'Enter') doAuth(); };
+    $('#authPass2').onkeydown = e => { if (e.key === 'Enter') doAuth(); };
+    $('#btnLogout').onclick = logout;
+    $('#tabMine').onclick = () => { purView = 'mine'; $('#tabMine').className = 'on'; $('#tabAll').className = ''; renderPurchases(); };
+    $('#tabAll').onclick = () => { purView = 'all'; $('#tabAll').className = 'on'; $('#tabMine').className = ''; renderPurchases(); };
+    renderUserBar();
+    renderPurchases();
+    renderLeaderboard();
+    if (!session()) showAuth();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
 })();
 </script>
 </body>
