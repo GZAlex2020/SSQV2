@@ -990,7 +990,8 @@ if (typeof module !== 'undefined' && module.exports) {
   function buildRefineSegs(plan) {
     const segR = $('#segRRed'), segB = $('#segRBlue');
     segR.innerHTML = ''; segB.innerHTML = '';
-    $('#refineOut').style.display = 'none';
+    /* 同一方案内保持二次推荐结果展开(购买后刷新按钮时), 换方案才折叠 */
+    $('#refineOut').style.display = (window.__refinePlan === plan) ? '' : 'none';
     const showRed = plan.m > 6, showBlue = plan.n > 1;
     $('#refineRowRed').style.display = showRed ? '' : 'none';
     $('#refineRowBlue').style.display = showBlue ? '' : 'none';
@@ -1027,6 +1028,7 @@ if (typeof module !== 'undefined' && module.exports) {
   }
 
   function runRefine(plan) {
+    window.__refinePlan = plan;
     const rs = scoreReds(plan.st, plan.strategy);
     const bs = scoreBlues(plan.st, plan.strategy);
     const rr = refineReds(plan.reds, rs, refSel.red);
@@ -1043,14 +1045,20 @@ if (typeof module !== 'undefined' && module.exports) {
       ' · 合计 ¥' + cost.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     const saved = plan.cost - cost;
     const brf = $('#btnBuyRefine');
-    brf.className = 'btn-buy';
-    brf.textContent = '购买此二次推荐（' + bets + ' 注 · ¥' + cost.toFixed(2) + '）';
-    brf.onclick = function () {
-      SSQ.buy({
-        label: '二次推荐 ' + rr.length + '红+' + bb.length + '蓝',
-        reds: rr, blues: bb, bets: bets, cost: cost
-      });
-    };
+    if (SSQ.hasPurchase(rr, bb)) {
+      brf.className = 'btn-buy done';
+      brf.textContent = '✓ 已购买过该号码组合';
+      brf.onclick = function () { SSQ.toast('该号码组合已在购买记录中，不能重复添加'); };
+    } else {
+      brf.className = 'btn-buy';
+      brf.textContent = '购买此二次推荐（' + bets + ' 注 · ¥' + cost.toFixed(2) + '）';
+      brf.onclick = function () {
+        SSQ.buy({
+          label: '二次推荐 ' + rr.length + '红+' + bb.length + '蓝',
+          reds: rr, blues: bb, bets: bets, cost: cost
+        });
+      };
+    }
     $('#refNote').innerHTML =
       '在 ' + plan.m + ' 红 + ' + plan.n + ' 蓝的推荐池内按综合评分缩小到 <b>' + rr.length +
       ' 红 + ' + bb.length + ' 蓝</b>：注数 ' + plan.bets + ' → <b>' + bets + '</b>，金额 ¥' +
@@ -1061,6 +1069,7 @@ if (typeof module !== 'undefined' && module.exports) {
 
   /* ---------- 渲染结果 ---------- */
   function renderResult(plan, noScroll) {
+    window.__lastPlan = plan;   // 供购买成功后刷新按钮状态
     const bt = backtest(DRAWS, state.strategy, state.reds, state.blues, 30);
     const isSingleMode = (plan.m === 6 && plan.n === 1);  // 仅 6红+1蓝 按单式推荐展示; 6红+多蓝 仍是复式
     const pSingle = pWinSingle();
@@ -1078,16 +1087,22 @@ if (typeof module !== 'undefined' && module.exports) {
     $('#compoundGrpB').style.display = isSingleMode ? 'none' : '';
     $('#resReds').innerHTML = plan.reds.map(n => ballHTML(n, 'red')).join('');
     $('#resBlues').innerHTML = plan.blues.map(n => ballHTML(n, 'blue')).join('');
-    // 复式购买按钮
+    // 复式购买按钮(已买过同号码则显示已购买状态)
     const bcb = $('#btnBuyCompound');
-    bcb.className = 'btn-buy';
-    bcb.textContent = '购买此复式方案（' + plan.bets + ' 注 · ¥' + plan.cost.toFixed(2) + '）';
-    bcb.onclick = function () {
-      SSQ.buy({
-        label: '复式 ' + plan.m + '红+' + plan.n + '蓝 · ' + STRAT_NAME[state.strategy],
-        reds: plan.reds, blues: plan.blues, bets: plan.bets, cost: plan.cost
-      });
-    };
+    if (SSQ.hasPurchase(plan.reds, plan.blues)) {
+      bcb.className = 'btn-buy done';
+      bcb.textContent = '✓ 已购买过该号码组合';
+      bcb.onclick = function () { SSQ.toast('该号码组合已在购买记录中，不能重复添加'); };
+    } else {
+      bcb.className = 'btn-buy';
+      bcb.textContent = '购买此复式方案（' + plan.bets + ' 注 · ¥' + plan.cost.toFixed(2) + '）';
+      bcb.onclick = function () {
+        SSQ.buy({
+          label: '复式 ' + plan.m + '红+' + plan.n + '蓝 · ' + STRAT_NAME[state.strategy],
+          reds: plan.reds, blues: plan.blues, bets: plan.bets, cost: plan.cost
+        });
+      };
+    }
     // 复式标题旁的价格徽标: 组合数 × 蓝球数 = 总注数 · 合计金额
     $('#compoundPrice').textContent = 'C(' + plan.m + ',6)=' + plan.redCombos +
       ' 组 × ' + plan.n + ' 蓝 = ' + plan.bets + ' 注 · 每注 ¥' + PRICE.toFixed(2) +
@@ -1103,6 +1118,7 @@ if (typeof module !== 'undefined' && module.exports) {
         : '单式参考（按推荐组数拆出 ' + plan.count + ' 注，每注独立计价）';
       $('#resSingles').innerHTML = plan.singles.map((s, i) => {
         const odd = s.odd;
+        const bought = SSQ.hasPurchase(s.red, [s.blue]);
         return '<div class="single">' +
           '<span style="font-size:12.5px;font-weight:700;color:#8b95a7">第 ' + (i + 1) + ' 注</span>' +
           '<span class="balls-row">' +
@@ -1111,11 +1127,13 @@ if (typeof module !== 'undefined' && module.exports) {
           '<span style="font-size:11.5px;color:#8b95a7">和值 ' + s.sum + ' · 奇偶 ' + odd + ':' + (6 - odd) + '</span>' +
           '<span class="odds">中奖率 ' + pct(pSingle) + '</span>' +
           '<span class="price"><b>¥' + PRICE.toFixed(2) + '</b><span>1 注 · 每注 2 元</span></span>' +
-          '<button class="btn-buy" data-i="' + i + '">购买</button>' +
+          (bought
+            ? '<button class="btn-buy done">✓ 已购买</button>'
+            : '<button class="btn-buy" data-i="' + i + '">购买</button>') +
           '</div>';
       }).join('');
       // 每注单式的购买按钮
-      [].forEach.call(document.querySelectorAll('#resSingles .btn-buy'), btn => {
+      [].forEach.call(document.querySelectorAll('#resSingles .btn-buy[data-i]'), btn => {
         btn.onclick = function () {
           const s = plan.singles[+btn.dataset.i];
           SSQ.buy({ label: '单式 · ' + STRAT_NAME[state.strategy], reds: s.red, blues: [s.blue], bets: 1, cost: PRICE });
@@ -1336,6 +1354,17 @@ if (typeof module !== 'undefined' && module.exports) {
     let rt;
     window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(drawSumChart, 160); });
 
+    // 购买成功后刷新推荐区按钮为"已购买"状态
+    document.addEventListener('ssq:purchase', function () {
+      if (window.__lastPlan) {
+        try {
+          renderResult(window.__lastPlan, true);
+          /* 二次推荐结果保持展开时, 同步刷新其购买按钮状态 */
+          if (window.__refinePlan === window.__lastPlan) runRefine(window.__lastPlan);
+        } catch (e) { console.error(e); }
+      }
+    });
+
     // 打开页面即联网检查最新数据
     autoRefresh();
   }
@@ -1500,9 +1529,24 @@ if (typeof module !== 'undefined' && module.exports) {
 
   /* ---------- 购买记录 ---------- */
   let purView = 'mine';
+  /* 号码组合的唯一键(红球+蓝球排序后拼接, 与顺序/购买时间无关) */
+  function purKey(reds, blues) {
+    return reds.slice().sort((a, b) => a - b).join(',') + '|' +
+      blues.slice().sort((a, b) => a - b).join(',');
+  }
+  /* 指定用户是否已买过相同号码组合 */
+  function hasPurchase(user, reds, blues) {
+    const k = purKey(reds, blues);
+    return purchases().some(x => x.user === user && purKey(x.reds, x.blues) === k);
+  }
   function buy(item) {
     const s = session();
     if (!s) { showAuth(); toast('请先登录后再购买'); return false; }
+    /* 同一用户相同号码组合只允许购买一次 */
+    if (hasPurchase(s.name, item.reds, item.blues)) {
+      toast('该号码组合已在购买记录中，不能重复添加');
+      return false;
+    }
     const list = purchases();
     list.unshift({
       id: Date.now() + '_' + Math.random().toString(36).slice(2, 7),
@@ -1513,6 +1557,8 @@ if (typeof module !== 'undefined' && module.exports) {
     });
     save(LS_PUR, list);
     renderPurchases();
+    /* 通知主脚本刷新购买按钮为"已购买"状态 */
+    try { document.dispatchEvent(new CustomEvent('ssq:purchase')); } catch (e) {}
     toast('已加入购买记录: ' + (item.label || '') + ' ¥' + item.cost.toFixed(2));
     return true;
   }
@@ -1623,7 +1669,16 @@ if (typeof module !== 'undefined' && module.exports) {
   }
 
   /* ---------- 对外接口 ---------- */
-  window.SSQ = { buy: buy, session: session };
+  window.SSQ = {
+    buy: buy,
+    session: session,
+    toast: toast,
+    /* 供主脚本判断按钮状态: 当前登录用户是否已买过该号码组合 */
+    hasPurchase: function (reds, blues) {
+      const s = session();
+      return s ? hasPurchase(s.name, reds, blues) : false;
+    }
+  };
 
   /* ---------- 启动 ---------- */
   function start() {
