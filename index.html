@@ -131,6 +131,12 @@ body{
 .pur-judge input:focus{outline:0;border-color:#e23b3b}
 .pur-judge .jbtn{border:0;border-radius:10px;padding:8px 15px;font-size:12.5px;font-weight:700;
   color:#fff;background:#3b82f6;cursor:pointer}
+.pur-del{border:1.5px solid #fca5a5;color:#dc2626;background:#fff;border-radius:9px;padding:4px 11px;
+  font-size:12px;font-weight:700;cursor:pointer;margin-left:10px;flex-shrink:0}
+.pur-del:hover{background:#dc2626;color:#fff}
+.pur-clear{border:1.5px solid #cbd5e1;color:#64748b;background:#fff;border-radius:10px;padding:6px 14px;
+  font-size:12.5px;font-weight:700;cursor:pointer}
+.pur-clear:hover{border-color:#dc2626;color:#dc2626}
 .pur-result{margin-top:10px;border-radius:11px;padding:11px 13px;font-size:13px;line-height:1.75}
 .pur-result.win{background:#f0fdf4;border:1px solid #bbf7d0;color:#14532d}
 .pur-result.lose{background:#f8fafc;border:1px solid #e2e8f0;color:#64748b}
@@ -404,6 +410,7 @@ tbody tr:hover{background:#fafcff}
         <button class="on" id="tabMine">我的记录</button>
         <button id="tabAll">全部用户</button>
       </div>
+      <button class="pur-clear" id="btnPurClear" style="display:none">清空记录</button>
     </div>
     <div class="hint">点推荐号码旁的「购买」把方案记入列表；开奖后在记录里输入开奖期数，系统自动判奖并记入排行榜。</div>
     <div id="purList"></div>
@@ -1563,6 +1570,40 @@ if (typeof module !== 'undefined' && module.exports) {
     return true;
   }
 
+  /* 删除单条购买记录: 记录本人或管理员可操作 */
+  function delPurchase(id) {
+    const s = session();
+    if (!s) return;
+    const list = purchases();
+    const p = list.find(x => x.id === id);
+    if (!p) return;
+    if (p.user !== s.name && s.role !== 'admin') { toast('只能删除自己的购买记录'); return; }
+    if (!window.confirm('确定删除该条购买记录吗?\n\n' + p.label + ' · ' + p.m + '红+' + p.n +
+      '蓝 · ¥' + fmt(p.cost) + '\n(如已判奖,排行榜会同步更新)')) return;
+    save(LS_PUR, list.filter(x => x.id !== id));
+    renderPurchases();
+    renderLeaderboard();
+    /* 删除后该号码可再次购买, 刷新推荐区按钮状态 */
+    try { document.dispatchEvent(new CustomEvent('ssq:purchase')); } catch (e) {}
+    toast('已删除该条购买记录');
+  }
+
+  /* 清空购买记录: 普通用户清自己的, 管理员在"全部用户"视图下清所有 */
+  function clearPurchases() {
+    const s = session();
+    if (!s) return;
+    const isAdminAll = (s.role === 'admin' && purView === 'all');
+    const scope = isAdminAll
+      ? '所有用户的全部购买记录(含判奖结果,中奖排行榜将同步清空)'
+      : '你的全部购买记录(含判奖结果)';
+    if (!window.confirm('确定清空' + scope + '吗?\n\n此操作不可恢复!')) return;
+    save(LS_PUR, isAdminAll ? [] : purchases().filter(x => x.user !== s.name));
+    renderPurchases();
+    renderLeaderboard();
+    try { document.dispatchEvent(new CustomEvent('ssq:purchase')); } catch (e) {}
+    toast(isAdminAll ? '已清空所有用户的购买记录' : '已清空你的购买记录');
+  }
+
   function judgePurchase(id, issue) {
     const s = session();
     if (!s) return;
@@ -1597,6 +1638,10 @@ if (typeof module !== 'undefined' && module.exports) {
     if (!s) { wrap.innerHTML = ''; return; }
     const all = purchases();
     const list = (s.role === 'admin' && purView === 'all') ? all : all.filter(x => x.user === s.name);
+    /* 清空按钮: 有记录才显示, 文案随视图变化 */
+    const btnClear = $('#btnPurClear');
+    btnClear.style.display = list.length ? '' : 'none';
+    btnClear.textContent = (s.role === 'admin' && purView === 'all') ? '清空全部记录' : '清空我的记录';
     if (!list.length) {
       wrap.innerHTML = '<div class="hint" style="padding:8px 0">' +
         (purView === 'all' ? '还没有任何用户的购买记录。' : '还没有购买记录，去推荐号码旁点「购买」吧。') + '</div>';
@@ -1621,7 +1666,8 @@ if (typeof module !== 'undefined' && module.exports) {
         '<div class="pur-head"><span class="pt">' + (purView === 'all' ? esc(p.user) + ' · ' : '') + esc(p.label) + '</span>' +
         '<span class="pm">' + p.m + '红+' + p.n + '蓝 · ' + p.bets + ' 注</span>' +
         '<span class="pm">' + new Date(p.ts).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) + '</span>' +
-        '<span class="cost">¥' + fmt(p.cost) + '</span></div>' +
+        '<span class="cost">¥' + fmt(p.cost) + '</span>' +
+        '<button class="pur-del" id="pd_' + p.id + '">删除</button></div>' +
         '<div style="margin-top:8px">' + ballsHTML(p.reds, p.blues) + '</div>' +
         '<div class="pur-judge"><span style="font-size:12.5px;color:#7b8698">输入开奖期数判奖:</span>' +
         '<input id="ji_' + p.id + '" placeholder="如 2026131" inputmode="numeric">' +
@@ -1634,6 +1680,8 @@ if (typeof module !== 'undefined' && module.exports) {
       if (btn) btn.onclick = () => judgePurchase(p.id, document.getElementById('ji_' + p.id).value);
       const inp = document.getElementById('ji_' + p.id);
       if (inp) inp.onkeydown = e => { if (e.key === 'Enter') judgePurchase(p.id, inp.value); };
+      const del = document.getElementById('pd_' + p.id);
+      if (del) del.onclick = () => delPurchase(p.id);
     });
   }
 
@@ -1691,6 +1739,7 @@ if (typeof module !== 'undefined' && module.exports) {
     $('#btnLogout').onclick = logout;
     $('#tabMine').onclick = () => { purView = 'mine'; $('#tabMine').className = 'on'; $('#tabAll').className = ''; renderPurchases(); };
     $('#tabAll').onclick = () => { purView = 'all'; $('#tabAll').className = 'on'; $('#tabMine').className = ''; renderPurchases(); };
+    $('#btnPurClear').onclick = clearPurchases;
     renderUserBar();
     renderPurchases();
     renderLeaderboard();
