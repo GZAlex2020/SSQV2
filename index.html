@@ -126,9 +126,10 @@ body{
 .pur-head .pm{font-size:12px;color:#8b95a7}
 .pur-head .cost{margin-left:auto;font-size:13.5px;font-weight:800;color:#e23b3b}
 .pur-judge{display:flex;align-items:center;gap:9px;margin-top:11px;flex-wrap:wrap}
-.pur-judge input{border:1.5px solid #e3e8f2;border-radius:10px;padding:8px 11px;font-size:13px;
-  width:120px;font-family:inherit;font-variant-numeric:tabular-nums}
-.pur-judge input:focus{outline:0;border-color:#e23b3b}
+.pur-judge input,.pur-judge select{border:1.5px solid #e3e8f2;border-radius:10px;padding:8px 11px;font-size:13px;
+  width:150px;font-family:inherit;font-variant-numeric:tabular-nums;background:#fff;color:#1f2a3d}
+.pur-judge input:focus,.pur-judge select:focus{outline:0;border-color:#e23b3b}
+.pur-judge select{cursor:pointer;-webkit-appearance:auto}
 .pur-judge .jbtn{border:0;border-radius:10px;padding:8px 15px;font-size:12.5px;font-weight:700;
   color:#fff;background:#3b82f6;cursor:pointer}
 .pur-del{border:1.5px solid #fca5a5;color:#dc2626;background:#fff;border-radius:9px;padding:4px 11px;
@@ -249,6 +250,12 @@ tbody tr:hover{background:#fafcff}
 .mini i.b{background:linear-gradient(150deg,#5f96ff,#1b4ecb);margin-left:6px}
 
 .foot{margin-top:26px;text-align:center;font-size:12px;color:#96a0b2;line-height:1.9}
+.pagenav{display:flex;gap:10px;margin-top:18px}
+.pagenav button{flex:1;border:1.5px solid #e3e8f2;background:#fff;border-radius:14px;padding:13px 10px;
+  font-size:14px;font-weight:700;color:#4a5568;cursor:pointer;transition:.16s;font-family:inherit}
+.pagenav button:hover{border-color:#f0a8a0;color:#e23b3b}
+.pagenav button.on{background:linear-gradient(135deg,#e23b3b,#f0663a);border-color:transparent;color:#fff;
+  box-shadow:0 6px 16px rgba(226,59,59,.25)}
 @media(max-width:640px){
   .hero{padding:22px 20px}.hero h1{font-size:21px}
   .card{padding:18px 16px}
@@ -291,6 +298,12 @@ tbody tr:hover{background:#fafcff}
     <div class="sync loading" id="syncStatus">正在联网检查最新数据…</div>
   </header>
 
+  <nav class="pagenav" id="pageNav">
+    <button class="on" id="navMain">🎯 号码分析</button>
+    <button id="navRecords">🧾 购买记录 / 排行榜</button>
+  </nav>
+
+  <div id="pageMain">
   <section class="card">
     <h2>分析参数</h2>
     <div class="hint">选择你要投注的号码个数，点击下方按钮开始推理。选择个数超过标准（红球6个 / 蓝球1个）即为「复式投注」。</div>
@@ -403,28 +416,6 @@ tbody tr:hover{background:#fafcff}
     <div class="note" id="resNote"></div>
   </section>
 
-  <section class="card" id="purSection">
-    <div class="res-head">
-      <h2>购买记录</h2>
-      <div class="seg" id="purTabs" style="display:none">
-        <button class="on" id="tabMine">我的记录</button>
-        <button id="tabAll">全部用户</button>
-      </div>
-      <button class="pur-clear" id="btnPurClear" style="display:none">清空记录</button>
-    </div>
-    <div class="hint">点推荐号码旁的「购买」把方案记入列表；开奖后在记录里输入开奖期数，系统自动判奖并记入排行榜。</div>
-    <div id="purList"></div>
-  </section>
-
-  <section class="card" id="lbSection">
-    <div class="res-head">
-      <h2>中奖排行榜</h2>
-      <div class="badge" id="lbBadge"></div>
-    </div>
-    <div class="hint">按已判奖记录的累计奖金排名，所有用户可见。一等奖/二等奖为浮动奖金，按常见金额估算显示。</div>
-    <div class="rate-wrap" id="lbWrap"></div>
-  </section>
-
   <div class="toast" id="toast"></div>
 
   <section class="card">
@@ -459,6 +450,31 @@ tbody tr:hover{background:#fafcff}
       </div>
     </details>
   </section>
+  </div>
+
+  <div id="pageRecords" style="display:none">
+    <section class="card" id="purSection">
+      <div class="res-head">
+        <h2>购买记录</h2>
+        <div class="seg" id="purTabs" style="display:none">
+          <button class="on" id="tabMine">我的记录</button>
+          <button id="tabAll">全部用户</button>
+        </div>
+        <button class="pur-clear" id="btnPurClear" style="display:none">清空记录</button>
+      </div>
+      <div class="hint">点推荐号码旁的「购买」把方案记入列表；开奖后在记录里选择或输入开奖期数，系统自动判奖并记入排行榜。</div>
+      <div id="purList"></div>
+    </section>
+
+    <section class="card" id="lbSection">
+      <div class="res-head">
+        <h2>中奖排行榜</h2>
+        <div class="badge" id="lbBadge"></div>
+      </div>
+      <div class="hint">按已判奖记录的累计奖金排名，所有用户可见。一等奖/二等奖为浮动奖金，按常见金额估算显示。</div>
+      <div class="rate-wrap" id="lbWrap"></div>
+    </section>
+  </div>
 
   <div class="foot">
     数据来源：中国福利彩票官方网站（www.cwl.gov.cn）公开开奖数据<br>
@@ -1386,6 +1402,168 @@ if (typeof module !== 'undefined' && module.exports) {
    本地实现: 数据存储于浏览器 localStorage(换设备/浏览器不可共享, 清缓存会丢失) */
 (function () {
   const LS_USERS = 'ssq_users', LS_SESSION = 'ssq_session', LS_PUR = 'ssq_purchases';
+
+  /* ---------- GitHub 私有仓库远程同步(跨设备共享) ---------- */
+  /* 数据存于独立私有仓库 SSQV2-data, token 仅对该仓库有写权限, 不涉及站点代码仓库 */
+  const GH_SYNC = {
+    owner: 'GZAlex2020', repo: 'SSQV2-data', branch: 'main', path: 'db.json',
+    token: localStorage.getItem('ssq_gh_token') || '',
+    sha: null,          // 远端文件当前 sha(用于更新)
+    queue: Promise.resolve(),
+    timer: null
+  };
+  function b64enc(str) { return btoa(unescape(encodeURIComponent(str))); }
+  function b64dec(b64) { return decodeURIComponent(escape(atob(String(b64).replace(/\s/g, '')))); }
+  /* 密码哈希(SHA-256), 老环境降级为确定性简单哈希 */
+  function sha256(text) {
+    if (window.crypto && window.crypto.subtle && window.TextEncoder) {
+      return crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)).then(function (buf) {
+        return [].map.call(new Uint8Array(buf), function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+      });
+    }
+    return Promise.resolve(function () {
+      let h = 5381;
+      for (let i = 0; i < text.length; i++) h = ((h << 5) + h + text.charCodeAt(i)) >>> 0;
+      return 'djb2_' + h.toString(16);
+    }());
+  }
+  /* 合并两份数据库: 用户按名字去重(哈希版优先), 购买记录按 id 去重(判奖信息新者优先) */
+  function mergeDB(remote, local) {
+    const uMap = {};
+    (remote.users || []).forEach(u => { if (u && u.name) uMap[u.name] = u; });
+    (local.users || []).forEach(u => {
+      const o = uMap[u.name];
+      if (!o) uMap[u.name] = u;
+      else if (u.passHash && !o.passHash) uMap[u.name] = u;
+    });
+    const pMap = {};
+    (remote.purchases || []).forEach(p => { if (p && p.id) pMap[p.id] = p; });
+    (local.purchases || []).forEach(p => {
+      const o = pMap[p.id];
+      if (!o) pMap[p.id] = p;
+      else {
+        const a = p.judged ? (p.judged.ts || 0) : 0, b = o.judged ? (o.judged.ts || 0) : 0;
+        if (a > b) pMap[p.id] = p;
+      }
+    });
+    return {
+      users: Object.keys(uMap).map(k => uMap[k]),
+      purchases: Object.keys(pMap).map(k => pMap[k]).sort((x, y) => y.ts - x.ts),
+      ver: Date.now()
+    };
+  }
+  async function ghFetchDB() {
+    const g = GH_SYNC;
+    if (!g.token) throw new Error('本地模式(未配置Token)');
+    const url = 'https://api.github.com/repos/' + g.owner + '/' + g.repo + '/contents/' + g.path + '?ref=' + g.branch + '&t=' + Date.now();
+    const res = await fetch(url, { cache: 'no-store', headers: { 'Authorization': 'token ' + g.token, 'Accept': 'application/vnd.github+json' } });
+    if (res.status === 404) return null;   // 远端数据文件尚未创建
+    if (!res.ok) throw new Error('GitHub API HTTP ' + res.status);
+    const j = await res.json();
+    g.sha = j.sha;
+    return JSON.parse(b64dec(j.content));
+  }
+  function syncState(s) {
+    let el = document.getElementById('syncChip');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'syncChip';
+      el.style.cssText = 'position:fixed;right:14px;bottom:14px;z-index:60;font-size:11.5px;font-weight:700;' +
+        'padding:5px 12px;border-radius:20px;background:#fff;border:1px solid #e2e8f0;color:#64748b;' +
+        'box-shadow:0 2px 8px rgba(0,0,0,.06);cursor:pointer';
+      el.title = '点击设置/更换云端同步 Token(保存在本机)';
+      el.onclick = function () {
+        const cur = localStorage.getItem('ssq_gh_token') || '';
+        const t = window.prompt('GitHub Token(用于跨设备云同步,只保存在本机浏览器)\n\n获取方式: GitHub → Settings → Developer settings →\nPersonal access tokens → Fine-grained tokens,\n仅授权 SSQV2-data 仓库的 Contents 读写权限。\n\n粘贴 Token(留空并确定则关闭云同步):', cur);
+        if (t === null) return;
+        GH_SYNC.token = t.trim();
+        if (GH_SYNC.token) localStorage.setItem('ssq_gh_token', GH_SYNC.token);
+        else localStorage.removeItem('ssq_gh_token');
+        startRemoteSync();
+      };
+      document.body.appendChild(el);
+    }
+    if (s === 'sync') { el.textContent = '☁ 数据同步中…'; el.style.color = '#3b82f6'; }
+    else if (s === 'ok') { el.textContent = '☁ 云端已同步'; el.style.color = '#2fa860'; }
+    else if (s === 'local') { el.textContent = '☁ 本地模式 · 点击开启云同步'; el.style.color = '#64748b'; }
+    else { el.textContent = '☁ 同步失败,使用本地数据'; el.style.color = '#dc2626'; }
+  }
+  function schedulePush() {
+    clearTimeout(GH_SYNC.timer);
+    GH_SYNC.timer = setTimeout(ghPushDB, 1500);   // 防抖: 连续操作只推一次, 避免触发GitHub提交限流
+  }
+  function ghPushDB() {
+    if (!GH_SYNC.token) { syncState('local'); return Promise.resolve(); }
+    GH_SYNC.queue = GH_SYNC.queue.then(async function () {
+      const g = GH_SYNC;
+      const url = 'https://api.github.com/repos/' + g.owner + '/' + g.repo + '/contents/' + g.path;
+      /* 最多尝试 3 次: 失败(限流/冲突/网络)后退避重试, 每次重推前重新拉远端合并 */
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          let db = { users: users(), purchases: purchases(), ver: Date.now() };
+          /* 先拉远端最新做合并, 避免多设备互相覆盖 */
+          let sha = g.sha, remote = null;
+          try {
+            const r = await fetch(url + '?ref=' + g.branch + '&t=' + Date.now(), { cache: 'no-store', headers: { 'Authorization': 'token ' + g.token, 'Accept': 'application/vnd.github+json' } });
+            if (r.status === 404) sha = null;
+            else if (r.ok) {
+              const j = await r.json();
+              sha = j.sha; g.sha = j.sha;
+              remote = JSON.parse(b64dec(j.content));
+            }
+          } catch (e) { /* 拉不到就只推本地 */ }
+          if (remote) {
+            const merged = mergeDB(remote, db);
+            if (JSON.stringify(merged.users) === JSON.stringify(remote.users) &&
+                JSON.stringify(merged.purchases) === JSON.stringify(remote.purchases)) {
+              syncState('ok');
+              return;   // 无变化不提交
+            }
+            db = merged;
+          }
+          const body = { message: 'data: 自动同步 ' + new Date().toISOString(), content: b64enc(JSON.stringify(db)), branch: g.branch };
+          if (sha) body.sha = sha;
+          const res = await fetch(url, { method: 'PUT', cache: 'no-store', headers: { 'Authorization': 'token ' + g.token, 'Accept': 'application/vnd.github+json' }, body: JSON.stringify(body) });
+          if (!res.ok) throw new Error('HTTP ' + res.status + (res.status === 403 ? '(可能触发GitHub限流)' : ''));
+          const j = await res.json();
+          g.sha = j.content && j.content.sha;
+          syncState('ok');
+          return;
+        } catch (e) {
+          console.warn('云端同步失败(第' + attempt + '次):', e.message);
+          if (attempt < 3) {
+            syncState('sync');
+            await new Promise(r => setTimeout(r, 3500 * attempt));   // 退避 3.5s / 7s
+          } else {
+            syncState('fail');
+          }
+        }
+      }
+    });
+    return GH_SYNC.queue;
+  }
+  /* 页面加载时: 拉取云端 → 合并 → 刷新界面; 远端为空则把本地数据迁移上去 */
+  async function startRemoteSync() {
+    syncState('sync');
+    try {
+      const remote = await ghFetchDB();
+      if (remote && (remote.users || remote.purchases)) {
+        const merged = mergeDB(remote, { users: users(), purchases: purchases() });
+        save(LS_USERS, merged.users);
+        save(LS_PUR, merged.purchases);
+        renderPurchases();
+        renderLeaderboard();
+        if (session()) renderUserBar();
+      } else {
+        ghPushDB();   // 首次使用: 把本地已有数据(含管理员账号)迁移到云端
+      }
+    } catch (e) {
+      console.warn('云端数据拉取失败, 使用本地数据:', e.message);
+      syncState(GH_SYNC.token ? 'fail' : 'local');
+      return;
+    }
+    syncState('ok');
+  }
   const ADMIN_NAME = 'Admin', ADMIN_PASS = 'Alex3344139';
   const PRICE = 2;
   /* 奖级: 1/2 等为浮动奖金,按常见水平估算 */
@@ -1399,7 +1577,10 @@ if (typeof module !== 'undefined' && module.exports) {
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   function load(k, d) { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } }
-  function save(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
+  function save(k, v) {
+    localStorage.setItem(k, JSON.stringify(v));
+    if (k !== LS_SESSION) schedulePush();   // 用户/购买数据变更自动同步云端
+  }
 
   /* ---------- 存储 ---------- */
   function users() { return load(LS_USERS, []); }
@@ -1452,20 +1633,41 @@ if (typeof module !== 'undefined' && module.exports) {
     $('#authGo').textContent = m === 'login' ? '登 录' : '注 册';
     $('#authErr').textContent = '';
   }
-  function doAuth() {
+  async function doAuth() {
     const name = $('#authUser').value.trim();
     const pass = $('#authPass').value;
     const err = $('#authErr');
     if (!name) { err.textContent = '请输入用户名'; return; }
     if (!pass || pass.length < 6) { err.textContent = '密码至少 6 位'; return; }
-    const list = users();
+    let list = users();
     if (authMode === 'login') {
-      const u = list.find(x => x.name === name);
-      if (!u || u.pass !== pass) { err.textContent = '用户名或密码错误'; return; }
+      let u = list.find(x => x.name === name);
+      /* 本地没有时再查一次云端(可能是其他设备新注册的账号) */
+      if (!u && GH_SYNC.token) {
+        try {
+          const remote = await ghFetchDB();
+          if (remote && remote.users) {
+            list = mergeDB(remote, { users: list, purchases: [] }).users;
+            save(LS_USERS, list);
+            u = list.find(x => x.name === name);
+          }
+        } catch (e) { /* 拉取失败按本地处理 */ }
+      }
+      if (!u) { err.textContent = '用户名或密码错误'; return; }
+      /* 兼容: 新记录用哈希, 旧明文记录比对原值并自动升级为哈希 */
+      if (u.passHash) {
+        if ((await sha256(pass)) !== u.passHash) { err.textContent = '用户名或密码错误'; return; }
+      } else if (u.pass !== pass) {
+        err.textContent = '用户名或密码错误'; return;
+      } else {
+        u.passHash = await sha256(pass);
+        delete u.pass;
+        save(LS_USERS, list);
+      }
     } else {
       if (list.some(x => x.name === name)) { err.textContent = '用户名已存在'; return; }
       if ($('#authPass2').value !== pass) { err.textContent = '两次密码不一致'; return; }
-      list.push({ name, pass, role: 'user', created: Date.now() });
+      list.push({ name: name, passHash: await sha256(pass), role: 'user', created: Date.now() });
       save(LS_USERS, list);
     }
     save(LS_SESSION, name);
@@ -1567,7 +1769,29 @@ if (typeof module !== 'undefined' && module.exports) {
     /* 通知主脚本刷新购买按钮为"已购买"状态 */
     try { document.dispatchEvent(new CustomEvent('ssq:purchase')); } catch (e) {}
     toast('已加入购买记录: ' + (item.label || '') + ' ¥' + item.cost.toFixed(2));
+    /* 购买成功后自动跳转到记录页, 方便查看 */
+    showPage('records');
     return true;
+  }
+
+  /* ---------- 页面切换: 号码分析 / 购买记录与排行榜 ---------- */
+  function showPage(p) {
+    $('#pageMain').style.display = p === 'main' ? '' : 'none';
+    $('#pageRecords').style.display = p === 'records' ? '' : 'none';
+    $('#navMain').className = p === 'main' ? 'on' : '';
+    $('#navRecords').className = p === 'records' ? 'on' : '';
+    if (p === 'records') { renderPurchases(); renderLeaderboard(); }
+    window.scrollTo({ top: 0 });
+  }
+
+  /* 最近一个月的开奖期数列表(最新在前), 用于判奖下拉选择 */
+  function recentIssues() {
+    const arr = DRAWS || [];
+    if (!arr.length) return [];
+    const last = arr[arr.length - 1];
+    const cut = new Date(last.d + 'T00:00:00').getTime() - 30 * 864e5;
+    return arr.filter(d => new Date(d.d + 'T00:00:00').getTime() >= cut)
+      .map(d => ({ i: d.i, d: d.d })).reverse();
   }
 
   /* 删除单条购买记录: 记录本人或管理员可操作 */
@@ -1669,20 +1893,41 @@ if (typeof module !== 'undefined' && module.exports) {
         '<span class="cost">¥' + fmt(p.cost) + '</span>' +
         '<button class="pur-del" id="pd_' + p.id + '">删除</button></div>' +
         '<div style="margin-top:8px">' + ballsHTML(p.reds, p.blues) + '</div>' +
-        '<div class="pur-judge"><span style="font-size:12.5px;color:#7b8698">输入开奖期数判奖:</span>' +
-        '<input id="ji_' + p.id + '" placeholder="如 2026131" inputmode="numeric">' +
+        '<div class="pur-judge"><span style="font-size:12.5px;color:#7b8698">开奖期数判奖:</span>' +
+        judgeCtrlHTML(p.id) +
         '<button class="jbtn" id="jb_' + p.id + '">自动判奖</button></div>' +
         '<div id="jr_' + p.id + '">' + judge + '</div>' +
         '</div>';
     }).join('');
     list.forEach(p => {
       const btn = document.getElementById('jb_' + p.id);
-      if (btn) btn.onclick = () => judgePurchase(p.id, document.getElementById('ji_' + p.id).value);
+      const sel = document.getElementById('js_' + p.id);
       const inp = document.getElementById('ji_' + p.id);
+      const getIssue = () => sel
+        ? (sel.value === '__manual__' ? (inp ? inp.value : '') : sel.value)
+        : (inp ? inp.value : '');
+      if (sel && inp) sel.onchange = () => {
+        const manual = sel.value === '__manual__';
+        inp.style.display = manual ? '' : 'none';
+        if (manual) inp.focus();
+      };
+      if (btn) btn.onclick = () => judgePurchase(p.id, getIssue());
       if (inp) inp.onkeydown = e => { if (e.key === 'Enter') judgePurchase(p.id, inp.value); };
       const del = document.getElementById('pd_' + p.id);
       if (del) del.onclick = () => delPurchase(p.id);
     });
+  }
+
+  /* 判奖期数控件: 下拉列表(最近一个月) + 可切换的手工输入 */
+  function judgeCtrlHTML(id) {
+    const issues = recentIssues();
+    if (!issues.length) {
+      return '<input id="ji_' + id + '" placeholder="如 2026131" inputmode="numeric">';
+    }
+    const opts = issues.map(x => '<option value="' + esc(x.i) + '">' + esc(x.i) + '（' + esc(x.d.slice(5)) + '）</option>').join('');
+    return '<select id="js_' + id + '" title="选择最近一个月的开奖期数">' + opts +
+      '<option value="__manual__">✍ 手工输入期数…</option></select>' +
+      '<input id="ji_' + id + '" style="display:none" placeholder="如 2026131" inputmode="numeric">';
   }
 
   /* ---------- 排行榜 ---------- */
@@ -1737,9 +1982,14 @@ if (typeof module !== 'undefined' && module.exports) {
     $('#authPass').onkeydown = e => { if (e.key === 'Enter') doAuth(); };
     $('#authPass2').onkeydown = e => { if (e.key === 'Enter') doAuth(); };
     $('#btnLogout').onclick = logout;
+    $('#navMain').onclick = () => showPage('main');
+    $('#navRecords').onclick = () => showPage('records');
     $('#tabMine').onclick = () => { purView = 'mine'; $('#tabMine').className = 'on'; $('#tabAll').className = ''; renderPurchases(); };
     $('#tabAll').onclick = () => { purView = 'all'; $('#tabAll').className = 'on'; $('#tabMine').className = ''; renderPurchases(); };
     $('#btnPurClear').onclick = clearPurchases;
+
+    // 启动云端数据同步(拉取/迁移)
+    startRemoteSync();
     renderUserBar();
     renderPurchases();
     renderLeaderboard();
