@@ -266,6 +266,18 @@ tbody tr:hover{background:#fafcff}
 .bt-range select{border:1.5px solid #e3e8f2;border-radius:10px;padding:8px 11px;font-size:13px;font-family:inherit;
   background:#fff;color:#1f2a3d;cursor:pointer;font-variant-numeric:tabular-nums}
 .bt-range select:focus{outline:0;border-color:#e23b3b}
+.bt-range .jbtn{background:linear-gradient(135deg,#e23b3b,#f0663a);color:#fff;padding:9px 20px;font-size:13px;
+  box-shadow:0 4px 12px rgba(226,59,59,.3);transition:.16s}
+.bt-range .jbtn:hover{filter:brightness(1.07);transform:translateY(-1px)}
+.bt-plans{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bt-plan{display:inline-flex;align-items:center;gap:6px;border:1.5px solid #e3e8f2;border-radius:11px;
+  padding:7px 12px;font-size:12.5px;cursor:pointer;background:#fff;user-select:none;color:#1f2a3d;transition:.14s}
+.bt-plan.on{border-color:#f0a8a0;background:#fff7f5}
+.bt-plan input{accent-color:#e23b3b;margin:0;cursor:pointer}
+.bt-plan .pm{color:#8b95a7;font-size:11.5px;font-variant-numeric:tabular-nums}
+.bt-mini{border:1.5px solid #e3e8f2;background:#fff;border-radius:11px;padding:7px 12px;font-size:12.5px;
+  color:#7b8698;cursor:pointer;font-family:inherit;font-weight:600}
+.bt-mini:hover{border-color:#f0a8a0;color:#e23b3b}
 @media(max-width:640px){
   .hero{padding:22px 20px}.hero h1{font-size:21px}
   .card{padding:18px 16px}
@@ -473,7 +485,7 @@ tbody tr:hover{background:#fafcff}
         </div>
         <button class="pur-clear" id="btnPurClear" style="display:none">清空记录</button>
       </div>
-      <div class="hint">点推荐号码旁的「购买」把方案记入列表；开奖后在记录里选择或输入开奖期数，系统自动判奖并记入排行榜。</div>
+      <div class="hint">点推荐号码旁的「购买」把方案记入列表；开奖后在记录里选择或输入开奖期数，系统自动判奖并记入排行榜。　<span id="lnkSync" style="color:#3b82f6;cursor:pointer;text-decoration:underline;white-space:nowrap">☁ 开启云同步(跨设备共享)</span></div>
       <div id="purList"></div>
     </section>
 
@@ -501,6 +513,10 @@ tbody tr:hover{background:#fafcff}
         <span class="rl">至</span>
         <select id="btTo" title="结束期号"></select>
         <button class="jbtn" id="btRun">开始分析</button>
+      </div>
+      <div class="ctrl">
+        <div class="lbl">选择方案 <span>（可多选，只回测勾选的方案；默认全部）</span></div>
+        <div class="bt-plans" id="btPlans"></div>
       </div>
     </section>
 
@@ -1557,6 +1573,15 @@ if (typeof module !== 'undefined' && module.exports) {
     g.sha = j.sha;
     return JSON.parse(b64dec(j.content));
   }
+  function ghTokenPrompt() {
+    const cur = localStorage.getItem('ssq_gh_token') || '';
+    const t = window.prompt('GitHub Token(用于跨设备云同步,只保存在本机浏览器)\n\n获取方式: GitHub → Settings → Developer settings →\nPersonal access tokens → Fine-grained tokens,\n仅授权 SSQV2-data 仓库的 Contents 读写权限。\n\n粘贴 Token(留空并确定则关闭云同步):', cur);
+    if (t === null) return;
+    GH_SYNC.token = t.trim();
+    if (GH_SYNC.token) localStorage.setItem('ssq_gh_token', GH_SYNC.token);
+    else localStorage.removeItem('ssq_gh_token');
+    startRemoteSync();
+  }
   function syncState(s) {
     let el = document.getElementById('syncChip');
     if (!el) {
@@ -1566,20 +1591,14 @@ if (typeof module !== 'undefined' && module.exports) {
         'padding:5px 12px;border-radius:20px;background:#fff;border:1px solid #e2e8f0;color:#64748b;' +
         'box-shadow:0 2px 8px rgba(0,0,0,.06);cursor:pointer';
       el.title = '点击设置/更换云端同步 Token(保存在本机)';
-      el.onclick = function () {
-        const cur = localStorage.getItem('ssq_gh_token') || '';
-        const t = window.prompt('GitHub Token(用于跨设备云同步,只保存在本机浏览器)\n\n获取方式: GitHub → Settings → Developer settings →\nPersonal access tokens → Fine-grained tokens,\n仅授权 SSQV2-data 仓库的 Contents 读写权限。\n\n粘贴 Token(留空并确定则关闭云同步):', cur);
-        if (t === null) return;
-        GH_SYNC.token = t.trim();
-        if (GH_SYNC.token) localStorage.setItem('ssq_gh_token', GH_SYNC.token);
-        else localStorage.removeItem('ssq_gh_token');
-        startRemoteSync();
-      };
+      el.onclick = ghTokenPrompt;
       document.body.appendChild(el);
     }
+    /* 本地模式不显示悬浮徽标, 避免打扰; 开启云同步的入口在购买记录页的提示行 */
+    if (s === 'local') { el.style.display = 'none'; return; }
+    el.style.display = '';
     if (s === 'sync') { el.textContent = '☁ 数据同步中…'; el.style.color = '#3b82f6'; }
     else if (s === 'ok') { el.textContent = '☁ 云端已同步'; el.style.color = '#2fa860'; }
-    else if (s === 'local') { el.textContent = '☁ 本地模式 · 点击开启云同步'; el.style.color = '#64748b'; }
     else { el.textContent = '☁ 同步失败,使用本地数据'; el.style.color = '#dc2626'; }
   }
   function schedulePush() {
@@ -1958,16 +1977,36 @@ if (typeof module !== 'undefined' && module.exports) {
     const idxs = n <= 8 ? labels.map((_, i) => i) : [0, Math.floor((n - 1) / 2), n - 1];
     idxs.forEach(i => g.fillText(labels[i], pad.l + (i + 0.5) / n * iw, H - 8));
   }
+  /* 渲染方案选择复选框(可多选, 默认全选) */
+  function btRenderPlans() {
+    const s = session();
+    const mine = s ? purchases().filter(x => x.user === s.name) : [];
+    const wrap = $('#btPlans');
+    if (!mine.length) { wrap.innerHTML = '<span style="font-size:12.5px;color:#94a3b8">还没有购买记录</span>'; return; }
+    wrap.innerHTML = mine.map(p =>
+      '<label class="bt-plan on"><input type="checkbox" value="' + esc(p.id) + '" checked>' +
+      '<span>' + esc(p.label || '(未命名方案)') + '</span>' +
+      '<span class="pm">' + p.m + '红+' + p.n + '蓝 · ' + p.bets + '注 · ¥' + fmt(p.cost) + '</span></label>'
+    ).join('') +
+      '<button class="bt-mini" id="btAll">全选</button>' +
+      '<button class="bt-mini" id="btNone">全不选</button>';
+    wrap.querySelectorAll('.bt-plan input').forEach(c => {
+      c.onchange = () => c.parentNode.className = 'bt-plan' + (c.checked ? ' on' : '');
+    });
+    const boxes = () => wrap.querySelectorAll('.bt-plan input[type=checkbox]');
+    $('#btAll').onclick = () => boxes().forEach(c => { c.checked = true; c.parentNode.className = 'bt-plan on'; });
+    $('#btNone').onclick = () => boxes().forEach(c => { c.checked = false; c.parentNode.className = 'bt-plan'; });
+  }
   function runBt() {
     const s = session();
     if (!s) { showAuth(); return; }
     const periods = btPeriods();
     if (!periods.length) { toast('请选择有效的期数范围'); return; }
-    const mine = purchases().filter(x => x.user === s.name);
+    const allMine = purchases().filter(x => x.user === s.name);
     const out = $('#btOut');
     out.style.display = '';
-    $('#btBadge').textContent = '共 ' + periods.length + ' 期 × ' + mine.length + ' 条方案';
-    if (!mine.length) {
+    if (!allMine.length) {
+      $('#btBadge').textContent = '';
       $('#btSummary').innerHTML = '<div class="hint" style="grid-column:1/-1;padding:8px 0">你还没有购买记录。先去「号码分析」页推荐号码旁点「购买」，再来回测方案吧。</div>';
       $('#btTable').innerHTML = '';
       $('#btLvTotal').textContent = '';
@@ -1977,6 +2016,11 @@ if (typeof module !== 'undefined' && module.exports) {
       });
       return;
     }
+    const ids = {};
+    document.querySelectorAll('#btPlans input[type=checkbox]').forEach(c => { ids[c.value] = c.checked; });
+    const mine = allMine.filter(x => ids[x.id]);
+    if (!mine.length) { toast('请至少勾选一个要分析的方案'); return; }
+    $('#btBadge').textContent = '共 ' + periods.length + ' 期 × ' + mine.length + ' 条方案';
     const lvCount = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
     const perPeriod = periods.map(d => ({ i: String(d.i), total: 0 }));
     let lvTotal = 0;
@@ -2033,6 +2077,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if ($('#btFrom').options.length !== arr.length) btFillSelects();
     if (!$('#btQuick').children.length) btQuickButtons();
     if (!btInited) { $('#btRun').onclick = runBt; btInited = true; }
+    btRenderPlans();
     runBt();
   }
 
@@ -2227,6 +2272,7 @@ if (typeof module !== 'undefined' && module.exports) {
     $('#navMain').onclick = () => showPage('main');
     $('#navRecords').onclick = () => showPage('records');
     $('#navAnalysis').onclick = () => showPage('analysis');
+    $('#lnkSync').onclick = ghTokenPrompt;
     $('#tabMine').onclick = () => { purView = 'mine'; $('#tabMine').className = 'on'; $('#tabAll').className = ''; renderPurchases(); };
     $('#tabAll').onclick = () => { purView = 'all'; $('#tabAll').className = 'on'; $('#tabMine').className = ''; renderPurchases(); };
     $('#btnPurClear').onclick = clearPurchases;
