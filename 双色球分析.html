@@ -278,6 +278,11 @@ tbody tr:hover{background:#fafcff}
 .bt-mini{border:1.5px solid #e3e8f2;background:#fff;border-radius:11px;padding:7px 12px;font-size:12.5px;
   color:#7b8698;cursor:pointer;font-family:inherit;font-weight:600}
 .bt-mini:hover{border-color:#f0a8a0;color:#e23b3b}
+.bt-hits{cursor:pointer;color:#1b4ecb;font-weight:700;text-decoration:underline dotted;white-space:nowrap}
+.bt-det td{background:#f8fafd}
+.bt-det-in{max-height:260px;overflow:auto;font-size:12.5px;color:#1f2a3d;padding:2px 4px}
+.bt-det-row{padding:5px 0;border-bottom:1px dashed #e9eef7;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.bt-det-row:last-child{border-bottom:0}
 @media(max-width:640px){
   .hero{padding:22px 20px}.hero h1{font-size:21px}
   .card{padding:18px 16px}
@@ -2026,16 +2031,20 @@ if (typeof module !== 'undefined' && module.exports) {
     let lvTotal = 0;
     const perRec = mine.map(p => {
       let win = 0, hits = 0, best = 9;
+      const hitList = [];
       periods.forEach((d, idx) => {
         const r = judgePlan(p, d.r, d.b);
-        if (r.total > 0) { win += r.total; hits++; if (r.best < best) best = r.best; }
+        if (r.total > 0) {
+          win += r.total; hits++; if (r.best < best) best = r.best;
+          hitList.push({ i: d.i, d: d.d, k: r.k, levels: r.levels, total: r.total });
+        }
         Object.keys(r.levels).forEach(l => {
           if (r.levels[l] > 0) { lvCount[l] += r.levels[l]; lvTotal += r.levels[l]; }
         });
         perPeriod[idx].total += r.total;
       });
       const invest = p.cost * periods.length;
-      return { p: p, invest: invest, win: win, hits: hits,
+      return { p: p, invest: invest, win: win, hits: hits, hitList: hitList,
         best: win > 0 ? best : null, roi: invest ? win / invest : 0 };
     }).sort((a, b) => b.win - a.win);
     const totalWin = perRec.reduce((a, r) => a + r.win, 0);
@@ -2057,19 +2066,40 @@ if (typeof module !== 'undefined' && module.exports) {
     $('#btLvTotal').textContent = '累计中奖 ' + lvTotal + ' 个奖级名额';
     let html = '<thead><tr><th>方案</th><th>规格</th><th>单期成本</th><th>总投入</th><th>命中期数</th>' +
       '<th>总奖金</th><th>收益率</th><th>最好成绩</th></tr></thead><tbody>';
-    perRec.forEach(r => {
+    perRec.forEach((r, ri) => {
       html += '<tr' + (r.win > 0 ? ' class="me"' : '') + '>' +
         '<td>' + esc(r.p.label || '(未命名方案)') + '</td>' +
         '<td>' + r.p.m + '红+' + r.p.n + '蓝 · ' + r.p.bets + ' 注</td>' +
         '<td>¥' + fmt(r.p.cost) + '</td>' +
         '<td>¥' + fmt(r.invest) + '</td>' +
-        '<td>' + r.hits + ' / ' + periods.length + '</td>' +
+        '<td>' + (r.hitList.length
+          ? '<span class="bt-hits" data-ri="' + ri + '" title="点击展开: 中了哪几期、各多少奖金">' + r.hits + ' / ' + periods.length + ' ▾</span>'
+          : r.hits + ' / ' + periods.length) + '</td>' +
         '<td><b style="color:' + (r.win > 0 ? '#e23b3b' : '#94a3b8') + '">¥' + fmt(r.win) + '</b></td>' +
         '<td>' + (r.roi * 100).toFixed(1) + '%</td>' +
         '<td>' + (r.best ? '<span class="lv-tag ' + LV_CLS[r.best] + '">' + LV_NAME[r.best] + '</span>' : '<span style="color:#94a3b8">—</span>') + '</td>' +
         '</tr>';
+      if (r.hitList.length) {
+        html += '<tr class="bt-det" id="btd_' + ri + '" style="display:none"><td colspan="8"><div class="bt-det-in">' +
+          r.hitList.map(h =>
+            '<div class="bt-det-row"><b>' + esc(h.i) + '</b><span style="color:#8b95a7">（' + esc(h.d.slice(5)) + '）</span>' +
+            '<span>命中红球 <b>' + h.k + '</b> 个</span>' +
+            Object.keys(h.levels).filter(l => h.levels[l] > 0)
+              .map(l => '<span class="lv-tag ' + LV_CLS[l] + '">' + LV_NAME[l] + '×' + h.levels[l] + '</span>').join('') +
+            '<b style="color:#e23b3b;margin-left:auto">¥' + fmt(h.total) + '</b></div>'
+          ).join('') + '</div></td></tr>';
+      }
     });
     $('#btTable').innerHTML = html + '</tbody>';
+    $('#btTable').querySelectorAll('.bt-hits').forEach(sp => {
+      sp.onclick = () => {
+        const tr = document.getElementById('btd_' + sp.dataset.ri);
+        if (!tr) return;
+        const open = tr.style.display !== 'none';
+        tr.style.display = open ? 'none' : '';
+        sp.textContent = sp.textContent.replace(/ [▾▸]$/, '') + (open ? ' ▾' : ' ▸');
+      };
+    });
   }
   let btInited = false;
   function initBt() {
