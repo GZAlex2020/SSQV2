@@ -81,6 +81,11 @@ body{
 .seg.blue button:hover{border-color:#a9c1ff;color:#1b4ecb}
 .seg.blue button.on{background:linear-gradient(135deg,#3f74ef,#1b4ecb);box-shadow:0 7px 16px rgba(27,78,203,.3)}
 .seg.strategy button{min-width:auto;padding:9px 18px}
+.seg .seg-num{width:66px;border:1.5px solid #f0b9b0;border-radius:11px;padding:8px 6px;font-size:13.5px;font-weight:700;
+  font-family:inherit;text-align:center;font-variant-numeric:tabular-nums;color:#e23b3b;background:#fff}
+.seg .seg-num:focus{outline:0;border-color:#e23b3b}
+.seg.blue .seg-num{color:#1b4ecb;border-color:#b9c9f2}
+.seg.blue .seg-num:focus{border-color:#1b4ecb}
 
 .btn-go{width:100%;margin-top:22px;border:0;border-radius:14px;padding:16px;font-size:17px;font-weight:800;
   letter-spacing:1.5px;color:#fff;cursor:pointer;background:linear-gradient(135deg,#e23b3b,#f0663a);
@@ -306,7 +311,7 @@ tbody tr:hover{background:#fafcff}
   <div id="pageMain">
   <section class="card">
     <h2>分析参数</h2>
-    <div class="hint">选择你要投注的号码个数，点击下方按钮开始推理。选择个数超过标准（红球6个 / 蓝球1个）即为「复式投注」。</div>
+    <div class="hint">选择你要投注的号码个数（也可点「✎ 更多」手工输入），点击下方按钮开始推理。选择个数超过标准（红球6个 / 蓝球1个）即为「复式投注」。</div>
 
     <div class="ctrl">
       <div class="lbl">红球个数 <span>（从 1-33 中选出 N 个，标准为 6 个）</span></div>
@@ -815,30 +820,71 @@ if (typeof module !== 'undefined' && module.exports) {
   }
 
   /* ---------- 控件 ---------- */
+  /* 数字段选择器: 预设按钮 + 「✎ 更多」手工输入(1 ~ max) */
+  function buildNumSeg(seg, list, max, getV, setV) {
+    function mark(v) {
+      let hit = false;
+      [].forEach.call(seg.querySelectorAll('button[data-v]'), c => {
+        const on = +c.dataset.v === v;
+        if (on) hit = true;
+        c.className = on ? 'on' : '';
+      });
+      const more = seg.querySelector('.seg-more');
+      if (more) {
+        more.textContent = hit ? '✎ 更多' : (v + ' 个');
+        more.className = 'seg-more' + (hit ? '' : ' on');
+      }
+    }
+    list.forEach(i => {
+      const b = document.createElement('button');
+      b.textContent = i + ' 个';
+      b.dataset.v = i;
+      b.onclick = () => { setV(i); mark(i); };
+      seg.appendChild(b);
+    });
+    const more = document.createElement('button');
+    more.className = 'seg-more';
+    more.textContent = '✎ 更多';
+    more.title = '手工输入个数(1-' + max + ')';
+    const inp = document.createElement('input');
+    inp.type = 'number';
+    inp.min = 1; inp.max = max; inp.step = 1;
+    inp.className = 'seg-num';
+    inp.style.display = 'none';
+    inp.placeholder = '1-' + max;
+    function closeInput() { inp.style.display = 'none'; more.style.display = ''; }
+    function applyManual() {
+      const v = Math.round(+inp.value);
+      if (!(v >= 1 && v <= max)) {
+        const notify = window.SSQ && window.SSQ.toast ? window.SSQ.toast : window.alert;
+        notify('请输入 1 到 ' + max + ' 之间的整数');
+        inp.focus(); inp.select();
+        return;
+      }
+      setV(v);
+      mark(v);
+      closeInput();
+    }
+    more.onclick = () => {
+      more.style.display = 'none';
+      inp.style.display = '';
+      inp.value = getV();
+      inp.focus(); inp.select();
+    };
+    inp.onkeydown = e => {
+      if (e.key === 'Enter') applyManual();
+      if (e.key === 'Escape') closeInput();
+    };
+    inp.onblur = () => { if (inp.value !== '') applyManual(); else closeInput(); };
+    seg.appendChild(more);
+    seg.appendChild(inp);
+    mark(getV());
+  }
+
   function buildSegments() {
     const segRed = $('#segRed'), segBlue = $('#segBlue'), segSt = $('#segStrategy'), segCount = $('#segCount');
-    for (let i = 6; i <= 12; i++) {
-      const b = document.createElement('button');
-      b.textContent = i + ' 个';
-      b.dataset.v = i;
-      if (i === state.reds) b.className = 'on';
-      b.onclick = () => {
-        state.reds = i;
-        [].forEach.call(segRed.children, c => c.className = (+c.dataset.v === i ? 'on' : ''));
-      };
-      segRed.appendChild(b);
-    }
-    for (let i = 1; i <= 5; i++) {
-      const b = document.createElement('button');
-      b.textContent = i + ' 个';
-      b.dataset.v = i;
-      if (i === state.blues) b.className = 'on';
-      b.onclick = () => {
-        state.blues = i;
-        [].forEach.call(segBlue.children, c => c.className = (+c.dataset.v === i ? 'on' : ''));
-      };
-      segBlue.appendChild(b);
-    }
+    buildNumSeg(segRed, [6, 7, 8, 9, 10, 11, 12], 33, () => state.reds, v => state.reds = v);
+    buildNumSeg(segBlue, [1, 2, 3, 4, 5], 16, () => state.blues, v => state.blues = v);
     [1, 2, 3, 5, 8, 10].forEach(k => {
       const b = document.createElement('button');
       b.textContent = k + ' 注';
