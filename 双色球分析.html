@@ -261,6 +261,11 @@ tbody tr:hover{background:#fafcff}
 .pagenav button:hover{border-color:#f0a8a0;color:#e23b3b}
 .pagenav button.on{background:linear-gradient(135deg,#e23b3b,#f0663a);border-color:transparent;color:#fff;
   box-shadow:0 6px 16px rgba(226,59,59,.25)}
+.bt-range{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:4px}
+.bt-range .rl{font-size:13px;color:#7b8698;font-weight:600}
+.bt-range select{border:1.5px solid #e3e8f2;border-radius:10px;padding:8px 11px;font-size:13px;font-family:inherit;
+  background:#fff;color:#1f2a3d;cursor:pointer;font-variant-numeric:tabular-nums}
+.bt-range select:focus{outline:0;border-color:#e23b3b}
 @media(max-width:640px){
   .hero{padding:22px 20px}.hero h1{font-size:21px}
   .card{padding:18px 16px}
@@ -306,6 +311,7 @@ tbody tr:hover{background:#fafcff}
   <nav class="pagenav" id="pageNav">
     <button class="on" id="navMain">🎯 号码分析</button>
     <button id="navRecords">🧾 购买记录 / 排行榜</button>
+    <button id="navAnalysis">📊 中奖分析</button>
   </nav>
 
   <div id="pageMain">
@@ -478,6 +484,48 @@ tbody tr:hover{background:#fafcff}
       </div>
       <div class="hint">按已判奖记录的累计奖金排名，所有用户可见。一等奖/二等奖为浮动奖金，按常见金额估算显示。</div>
       <div class="rate-wrap" id="lbWrap"></div>
+    </section>
+  </div>
+
+  <div id="pageAnalysis" style="display:none">
+    <section class="card">
+      <h2>方案中奖分析（历史回测）</h2>
+      <div class="hint">把你的每条购买号码与所选范围内<b>每一期</b>的开奖号码比对：假设同一方案在每一期都投注，统计能中多少奖金。用于测试推荐方案的覆盖能力——历史回测不代表未来中奖率。</div>
+      <div class="ctrl">
+        <div class="lbl">快捷选择 <span>（选择要分析的历史期数范围）</span></div>
+        <div class="seg strategy" id="btQuick"></div>
+      </div>
+      <div class="bt-range">
+        <span class="rl">自定义范围：</span>
+        <select id="btFrom" title="起始期号"></select>
+        <span class="rl">至</span>
+        <select id="btTo" title="结束期号"></select>
+        <button class="jbtn" id="btRun">开始分析</button>
+      </div>
+    </section>
+
+    <section class="card" id="btOut" style="display:none">
+      <div class="res-head">
+        <h2>分析结果</h2>
+        <div class="badge" id="btBadge"></div>
+      </div>
+      <div class="cost" id="btSummary"></div>
+
+      <div class="grp" style="margin-top:20px">
+        <div class="gt">每期合计奖金（你的全部方案在该期同时投注）</div>
+        <div class="chart-box"><canvas id="btChartPeriod" height="200"></canvas></div>
+      </div>
+
+      <div class="grp" style="margin-top:20px">
+        <div class="gt">奖级命中分布 <span class="gt-price" id="btLvTotal"></span></div>
+        <div class="chart-box"><canvas id="btChartLevel" height="200"></canvas></div>
+      </div>
+
+      <div class="grp" style="margin-top:20px">
+        <div class="gt">方案明细（按总奖金排序）</div>
+        <div class="rate-wrap"><table class="lb-table" id="btTable"></table></div>
+      </div>
+      <div class="note" style="margin-top:14px">收益率为「总奖金 ÷ 总投入」。多数方案的收益率会明显低于 100%——这正是彩票返奖率约 51% 的体现，请把本页当作娱乐测试，理性购彩。</div>
     </section>
   </div>
 
@@ -1820,13 +1868,16 @@ if (typeof module !== 'undefined' && module.exports) {
     return true;
   }
 
-  /* ---------- 页面切换: 号码分析 / 购买记录与排行榜 ---------- */
+  /* ---------- 页面切换: 号码分析 / 购买记录与排行榜 / 中奖分析 ---------- */
   function showPage(p) {
     $('#pageMain').style.display = p === 'main' ? '' : 'none';
     $('#pageRecords').style.display = p === 'records' ? '' : 'none';
+    $('#pageAnalysis').style.display = p === 'analysis' ? '' : 'none';
     $('#navMain').className = p === 'main' ? 'on' : '';
     $('#navRecords').className = p === 'records' ? 'on' : '';
+    $('#navAnalysis').className = p === 'analysis' ? 'on' : '';
     if (p === 'records') { renderPurchases(); renderLeaderboard(); }
+    if (p === 'analysis') initBt();
     window.scrollTo({ top: 0 });
   }
 
@@ -1838,6 +1889,151 @@ if (typeof module !== 'undefined' && module.exports) {
     const cut = new Date(last.d + 'T00:00:00').getTime() - 30 * 864e5;
     return arr.filter(d => new Date(d.d + 'T00:00:00').getTime() >= cut)
       .map(d => ({ i: d.i, d: d.d })).reverse();
+  }
+
+  /* ---------- 中奖分析(历史回测) ---------- */
+  function btFillSelects() {
+    const arr = DRAWS || [];
+    const f = $('#btFrom'), t = $('#btTo');
+    const opts = arr.map(d => '<option value="' + esc(d.i) + '">' + esc(d.i) + '（' + esc(d.d.slice(5)) + '）</option>').join('');
+    f.innerHTML = opts; t.innerHTML = opts;
+    const n = arr.length;
+    if (n) {
+      f.selectedIndex = Math.max(0, n - 1 - 30);   // 默认最近30期
+      t.selectedIndex = n - 1;
+    }
+  }
+  function btQuickButtons() {
+    const seg = $('#btQuick');
+    [10, 20, 30, 50, 100].forEach(k => {
+      const b = document.createElement('button');
+      b.textContent = '最近' + k + '期';
+      b.onclick = () => {
+        const arr = DRAWS || [], n = arr.length;
+        if (!n) return;
+        $('#btFrom').selectedIndex = Math.max(0, n - k);
+        $('#btTo').selectedIndex = n - 1;
+        runBt();
+      };
+      seg.appendChild(b);
+    });
+  }
+  function btPeriods() {
+    const arr = DRAWS || [];
+    const fv = $('#btFrom').value, tv = $('#btTo').value;
+    const i1 = arr.findIndex(d => String(d.i) === String(fv));
+    const i2 = arr.findIndex(d => String(d.i) === String(tv));
+    if (i1 < 0 || i2 < 0) return [];
+    return arr.slice(Math.min(i1, i2), Math.max(i1, i2) + 1);
+  }
+  function drawBtBars(id, labels, values, color) {
+    const c = document.getElementById(id);
+    if (!c) return;
+    const dpr = window.devicePixelRatio || 1;
+    const W = c.clientWidth || c.parentNode.clientWidth || 600, H = 200;
+    c.width = W * dpr; c.height = H * dpr; c.style.height = H + 'px';
+    const g = c.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, W, H);
+    const pad = { l: 52, r: 12, t: 14, b: 28 };
+    const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
+    const max = Math.max(1, Math.max.apply(null, values));
+    g.font = '11px system-ui,sans-serif';
+    g.strokeStyle = '#eef1f7'; g.lineWidth = 1;
+    g.fillStyle = '#98a2b3'; g.textAlign = 'right';
+    for (let s = 0; s <= 4; s++) {
+      const v = max * s / 4, y = pad.t + ih - v / max * ih;
+      g.beginPath(); g.moveTo(pad.l, y); g.lineTo(W - pad.r, y); g.stroke();
+      g.fillText(v >= 10000 ? (v / 10000).toFixed(v % 10000 ? 1 : 0) + '万' : String(Math.round(v)), pad.l - 8, y + 4);
+    }
+    const n = values.length;
+    const bw = Math.max(2, Math.min(30, iw / n * 0.62));
+    values.forEach((v, i) => {
+      const x = pad.l + (i + 0.5) / n * iw;
+      const h = v / max * ih;
+      g.fillStyle = v > 0 ? color : '#dbe2ee';
+      g.fillRect(x - bw / 2, pad.t + ih - h, bw, h);
+    });
+    g.fillStyle = '#98a2b3'; g.textAlign = 'center';
+    const idxs = n <= 8 ? labels.map((_, i) => i) : [0, Math.floor((n - 1) / 2), n - 1];
+    idxs.forEach(i => g.fillText(labels[i], pad.l + (i + 0.5) / n * iw, H - 8));
+  }
+  function runBt() {
+    const s = session();
+    if (!s) { showAuth(); return; }
+    const periods = btPeriods();
+    if (!periods.length) { toast('请选择有效的期数范围'); return; }
+    const mine = purchases().filter(x => x.user === s.name);
+    const out = $('#btOut');
+    out.style.display = '';
+    $('#btBadge').textContent = '共 ' + periods.length + ' 期 × ' + mine.length + ' 条方案';
+    if (!mine.length) {
+      $('#btSummary').innerHTML = '<div class="hint" style="grid-column:1/-1;padding:8px 0">你还没有购买记录。先去「号码分析」页推荐号码旁点「购买」，再来回测方案吧。</div>';
+      $('#btTable').innerHTML = '';
+      $('#btLvTotal').textContent = '';
+      ['btChartPeriod', 'btChartLevel'].forEach(id => {
+        const c = document.getElementById(id);
+        c.width = 0; c.getContext('2d').clearRect(0, 0, 0, 0);
+      });
+      return;
+    }
+    const lvCount = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+    const perPeriod = periods.map(d => ({ i: String(d.i), total: 0 }));
+    let lvTotal = 0;
+    const perRec = mine.map(p => {
+      let win = 0, hits = 0, best = 9;
+      periods.forEach((d, idx) => {
+        const r = judgePlan(p, d.r, d.b);
+        if (r.total > 0) { win += r.total; hits++; if (r.best < best) best = r.best; }
+        Object.keys(r.levels).forEach(l => {
+          if (r.levels[l] > 0) { lvCount[l] += r.levels[l]; lvTotal += r.levels[l]; }
+        });
+        perPeriod[idx].total += r.total;
+      });
+      const invest = p.cost * periods.length;
+      return { p: p, invest: invest, win: win, hits: hits,
+        best: win > 0 ? best : null, roi: invest ? win / invest : 0 };
+    }).sort((a, b) => b.win - a.win);
+    const totalWin = perRec.reduce((a, r) => a + r.win, 0);
+    const totalInvest = perRec.reduce((a, r) => a + r.invest, 0);
+    const roiPct = totalInvest ? totalWin / totalInvest * 100 : 0;
+    const hitRecs = perRec.filter(r => r.win > 0).length;
+    $('#btSummary').innerHTML =
+      '<div class="item"><div class="k">分析范围</div><div class="v" style="font-size:16px">' +
+        periods.length + ' 期 × ' + mine.length + ' 条方案</div></div>' +
+      '<div class="item"><div class="k">总投入(每期都投)</div><div class="v">¥' + fmt(totalInvest) + '</div></div>' +
+      '<div class="item hl"><div class="k">总奖金</div><div class="v">¥' + fmt(totalWin) + '</div></div>' +
+      '<div class="item blue"><div class="k">总收益率</div><div class="v">' + roiPct.toFixed(1) + '<small>%</small></div></div>' +
+      '<div class="item"><div class="k">有中奖的方案</div><div class="v">' + hitRecs + ' / ' + mine.length + '</div></div>' +
+      '<div class="item"><div class="k">有中奖的期数</div><div class="v">' +
+        perPeriod.filter(x => x.total > 0).length + ' / ' + periods.length + '</div></div>';
+    drawBtBars('btChartPeriod', perPeriod.map(x => x.i), perPeriod.map(x => x.total), '#e23b3b');
+    drawBtBars('btChartLevel', ['一等奖', '二等奖', '三等奖', '四等奖', '五等奖', '六等奖'],
+      [1, 2, 3, 4, 5, 6].map(l => lvCount[l]), '#3f74ef');
+    $('#btLvTotal').textContent = '累计中奖 ' + lvTotal + ' 个奖级名额';
+    let html = '<thead><tr><th>方案</th><th>规格</th><th>单期成本</th><th>总投入</th><th>命中期数</th>' +
+      '<th>总奖金</th><th>收益率</th><th>最好成绩</th></tr></thead><tbody>';
+    perRec.forEach(r => {
+      html += '<tr' + (r.win > 0 ? ' class="me"' : '') + '>' +
+        '<td>' + esc(r.p.label || '(未命名方案)') + '</td>' +
+        '<td>' + r.p.m + '红+' + r.p.n + '蓝 · ' + r.p.bets + ' 注</td>' +
+        '<td>¥' + fmt(r.p.cost) + '</td>' +
+        '<td>¥' + fmt(r.invest) + '</td>' +
+        '<td>' + r.hits + ' / ' + periods.length + '</td>' +
+        '<td><b style="color:' + (r.win > 0 ? '#e23b3b' : '#94a3b8') + '">¥' + fmt(r.win) + '</b></td>' +
+        '<td>' + (r.roi * 100).toFixed(1) + '%</td>' +
+        '<td>' + (r.best ? '<span class="lv-tag ' + LV_CLS[r.best] + '">' + LV_NAME[r.best] + '</span>' : '<span style="color:#94a3b8">—</span>') + '</td>' +
+        '</tr>';
+    });
+    $('#btTable').innerHTML = html + '</tbody>';
+  }
+  let btInited = false;
+  function initBt() {
+    const arr = DRAWS || [];
+    if ($('#btFrom').options.length !== arr.length) btFillSelects();
+    if (!$('#btQuick').children.length) btQuickButtons();
+    if (!btInited) { $('#btRun').onclick = runBt; btInited = true; }
+    runBt();
   }
 
   /* 删除单条购买记录: 记录本人或管理员可操作 */
@@ -2030,6 +2226,7 @@ if (typeof module !== 'undefined' && module.exports) {
     $('#btnLogout').onclick = logout;
     $('#navMain').onclick = () => showPage('main');
     $('#navRecords').onclick = () => showPage('records');
+    $('#navAnalysis').onclick = () => showPage('analysis');
     $('#tabMine').onclick = () => { purView = 'mine'; $('#tabMine').className = 'on'; $('#tabAll').className = ''; renderPurchases(); };
     $('#tabAll').onclick = () => { purView = 'all'; $('#tabAll').className = 'on'; $('#tabMine').className = ''; renderPurchases(); };
     $('#btnPurClear').onclick = clearPurchases;
