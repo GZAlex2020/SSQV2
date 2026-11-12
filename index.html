@@ -289,6 +289,12 @@ tbody tr:hover{background:#fafcff}
   padding:4px 10px;font-size:12.5px;flex:none}
 .dyn-group label{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:#4a5568;font-weight:600}
 .dyn-group .pm{color:#8b95a7;font-size:11.5px;margin-left:auto}
+.dyn-group select{border:1.5px solid #dbe4f0;border-radius:9px;padding:6px 8px;font-size:12.5px;
+  background:#fff;color:#2b3648;font-family:inherit;cursor:pointer}
+.dyn-group select:focus{outline:0;border-color:#e23b3b}
+.dyn-match{margin-top:10px;background:#f7f9fd;border:1px dashed #dbe4f0;border-radius:10px;padding:9px 12px;
+  font-size:12.5px;color:#4a5568;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dyn-match .dm-num{font-weight:800;color:#e23b3b;font-variant-numeric:tabular-nums}
 .dyn-res{border:1px solid #e9eef7;border-radius:14px;padding:14px 16px;margin-top:12px}
 .dyn-res h3{margin:0;font-size:15px;color:#1c2434}
 @media(max-width:640px){
@@ -571,7 +577,7 @@ tbody tr:hover{background:#fafcff}
 
     <section class="card">
       <h2>动态分析（多组自动推荐对比）</h2>
-      <div class="hint">配置 N 组方案参数，系统按每组的历史期数窗口自动生成推荐号码，并模拟回测各组表现，最后汇总对比——用于横向比较不同覆盖范围 / 数据窗口的推荐效果。</div>
+      <div class="hint">配置 N 组方案参数，系统按每组的历史期数窗口自动生成推荐号码，并模拟回测各组表现，最后汇总对比——用于横向比较不同覆盖范围 / 数据窗口的推荐效果。每组可单独选择「匹配范围」（用开奖号码逐期核对推荐方案的中奖情况），结果里点「命中明细」可展开查看中了哪几期、各多少奖金。</div>
       <div class="ctrl">
         <div class="lbl">组数 N <span>（每组独立配置，逐组执行：生成推荐 → 回测 → 显示结果）</span></div>
         <div class="seg strategy" id="dynSegN"></div>
@@ -2234,10 +2240,14 @@ if (typeof module !== 'undefined' && module.exports) {
       /* 各组默认参数错开, 方便直接对比 */
       const defs = [[8, 2, 100], [6, 1, 100], [10, 3, 100], [12, 4, 100], [9, 2, 50], [7, 1, 50], [11, 2, 30], [6, 3, 30]];
       const d = defs[(i - 1) % defs.length];
+      const rangeOpts = [10, 20, 30, 50, 100].map(k =>
+        '<option value="' + k + '"' + (k === 30 ? ' selected' : '') + '>最近 ' + k + ' 期</option>').join('') +
+        '<option value="all">全部期数</option>';
       html += '<div class="dyn-group"><span class="dg-tag">组 ' + i + '</span>' +
         '<label>红球 <input type="number" class="seg-num dyn-m" min="1" max="33" step="1" value="' + d[0] + '"></label>' +
         '<label>蓝球 <input type="number" class="seg-num dyn-n" min="1" max="16" step="1" value="' + d[1] + '"></label>' +
         '<label>历史期数 <input type="number" class="seg-num dyn-k" min="10" max="100" step="1" value="' + d[2] + '"> 期</label>' +
+        '<label>匹配范围 <select class="dyn-range">' + rangeOpts + '</select></label>' +
         '<span class="pm">策略：均衡推荐 · 自动生成推荐号码并回测</span></div>';
     }
     wrap.innerHTML = html;
@@ -2265,10 +2275,13 @@ if (typeof module !== 'undefined' && module.exports) {
       const m = Math.round(+g.querySelector('.dyn-m').value);
       const n = Math.round(+g.querySelector('.dyn-n').value);
       const k = Math.round(+g.querySelector('.dyn-k').value);
+      const rv = g.querySelector('.dyn-range').value;
+      const rk = rv === 'all' ? DRAWS.length : Math.round(+rv);
       if (!(m >= 1 && m <= 33)) { toast('组 ' + (i + 1) + '：红球个数需在 1-33 之间'); return; }
       if (!(n >= 1 && n <= 16)) { toast('组 ' + (i + 1) + '：蓝球个数需在 1-16 之间'); return; }
       if (!(k >= 10 && k <= DRAWS.length)) { toast('组 ' + (i + 1) + '：历史期数需在 10-' + DRAWS.length + ' 之间'); return; }
-      cfgs.push({ m: m, n: n, k: k });
+      if (!(rk >= 1 && rk <= DRAWS.length)) { toast('组 ' + (i + 1) + '：匹配范围需在 1-' + DRAWS.length + ' 之间'); return; }
+      cfgs.push({ m: m, n: n, k: k, rk: rk });
     }
     if (!cfgs.length) { toast('请至少配置一组'); return; }
     const btn = $('#dynRun');
@@ -2284,7 +2297,21 @@ if (typeof module !== 'undefined' && module.exports) {
           const btk = hist.length >= 45
             ? backtest(hist, 'balanced', c.m, c.n, Math.min(30, hist.length - 40))
             : null;
-          return { i: i + 1, c: c, plan: plan, p: p, jack: jack, btk: btk };
+          /* 按该组匹配范围逐期判奖 */
+          const mPeriods = DRAWS.slice(Math.max(0, DRAWS.length - c.rk));
+          let mWin = 0, mHits = 0;
+          const hitList = [];
+          mPeriods.forEach(d => {
+            const r = judgePlan(plan, d.r, d.b);
+            if (r.total > 0) {
+              mWin += r.total; mHits++;
+              hitList.push({ i: d.i, d: d.d, k: r.k, levels: r.levels, total: r.total });
+            }
+          });
+          const mInvest = plan.cost * mPeriods.length;
+          const match = { cnt: mPeriods.length, win: mWin, hits: mHits, hitList: hitList,
+            invest: mInvest, roi: mInvest ? mWin / mInvest : 0 };
+          return { i: i + 1, c: c, plan: plan, p: p, jack: jack, btk: btk, match: match };
         });
         /* 每组结果卡片 */
         $('#dynBadge').textContent = '共 ' + results.length + ' 组';
@@ -2297,19 +2324,52 @@ if (typeof module !== 'undefined' && module.exports) {
           '%</b> · 一等奖概率 <b>1 / ' + Math.round(1 / r.jack).toLocaleString('en-US') + '</b>' +
           (r.btk ? ' · 近 ' + r.btk.cnt + ' 期模拟平均命中红球 <b>' + r.btk.avgRedHit.toFixed(2) +
             '</b> 个（随机基准 ' + r.btk.baseRedHit.toFixed(2) + '），蓝球命中率 ' +
-            (r.btk.blueRate * 100).toFixed(0) + '%' : '') + '</div></div>'
+            (r.btk.blueRate * 100).toFixed(0) + '%' : '') + '</div>' +
+          '<div class="dyn-match"><b>中奖匹配</b><span>范围：' +
+            (r.c.rk === DRAWS.length ? '全部 ' + r.match.cnt + ' 期' : '最近 ' + r.match.cnt + ' 期') + '</span>' +
+            '<span>命中 <span class="dm-num">' + r.match.hits + '</span> / ' + r.match.cnt + ' 期</span>' +
+            '<span>总投入 <span class="dm-num">¥' + fmt(r.match.invest) + '</span></span>' +
+            '<span>总奖金 <span class="dm-num">¥' + fmt(r.match.win) + '</span></span>' +
+            '<span>收益率 <span class="dm-num">' + (r.match.roi * 100).toFixed(1) + '%</span></span>' +
+            (r.match.hitList.length
+              ? '<span class="bt-hits" data-dyn="' + r.i + '" title="点击展开: 中了哪几期、各多少奖金">命中明细 ▾</span>'
+              : '<span style="color:#94a3b8">该范围内未中奖</span>') + '</div>' +
+          (r.match.hitList.length
+            ? '<div class="bt-det" id="dynd_' + r.i + '" style="display:none"><div class="bt-det-in">' +
+              r.match.hitList.map(h =>
+                '<div class="bt-det-row"><b>' + esc(h.i) + '</b><span style="color:#8b95a7">（' + esc(h.d.slice(5)) + '）</span>' +
+                '<span>命中红球 <b>' + h.k + '</b> 个</span>' +
+                Object.keys(h.levels).filter(l => h.levels[l] > 0)
+                  .map(l => '<span class="lv-tag ' + LV_CLS[l] + '">' + LV_NAME[l] + '×' + h.levels[l] + '</span>').join('') +
+                '<b style="color:#e23b3b;margin-left:auto">¥' + fmt(h.total) + '</b></div>'
+              ).join('') + '</div></div>' : '') +
+          '</div>'
         ).join('');
+        $('#dynResults').querySelectorAll('.bt-hits[data-dyn]').forEach(sp => {
+          sp.onclick = () => {
+            const box = document.getElementById('dynd_' + sp.dataset.dyn);
+            if (!box) return;
+            const open = box.style.display !== 'none';
+            box.style.display = open ? 'none' : '';
+            sp.textContent = sp.textContent.replace(/ [▾▸]$/, '') + (open ? ' ▾' : ' ▸');
+          };
+        });
         /* 汇总对比表 */
-        let html = '<thead><tr><th>组</th><th>规格</th><th>历史期数</th><th>总注数</th><th>合计金额</th>' +
-          '<th>中奖率(任意奖)</th><th>一等奖概率</th><th>模拟平均命中红球</th></tr></thead><tbody>';
+        let html = '<thead><tr><th>组</th><th>规格</th><th>历史期数</th><th>匹配范围</th><th>总注数</th><th>合计金额</th>' +
+          '<th>中奖率(任意奖)</th><th>一等奖概率</th><th>命中期数</th><th>匹配总奖金</th><th>匹配收益率</th>' +
+          '<th>模拟平均命中红球</th></tr></thead><tbody>';
         results.forEach(r => {
           html += '<tr><td class="lb-rank">组 ' + r.i + '</td>' +
             '<td>' + r.c.m + '红+' + r.c.n + '蓝</td>' +
             '<td>' + r.c.k + ' 期</td>' +
+            '<td>' + (r.c.rk === DRAWS.length ? '全部' : '最近 ' + r.c.rk + ' 期') + '</td>' +
             '<td>' + r.plan.bets + '</td>' +
             '<td>¥' + fmt(r.plan.cost) + '</td>' +
             '<td><b style="color:#e23b3b">' + (r.p * 100).toFixed(2) + '%</b></td>' +
             '<td>1 / ' + Math.round(1 / r.jack).toLocaleString('en-US') + '</td>' +
+            '<td>' + r.match.hits + ' / ' + r.match.cnt + '</td>' +
+            '<td><b style="color:' + (r.match.win > 0 ? '#e23b3b' : '#94a3b8') + '">¥' + fmt(r.match.win) + '</b></td>' +
+            '<td>' + (r.match.roi * 100).toFixed(1) + '%</td>' +
             '<td>' + (r.btk ? r.btk.avgRedHit.toFixed(2) + ' 个' : '<span style="color:#94a3b8">—</span>') + '</td></tr>';
         });
         $('#dynTable').innerHTML = html + '</tbody>';
