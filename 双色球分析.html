@@ -283,6 +283,14 @@ tbody tr:hover{background:#fafcff}
 .bt-det-in{max-height:260px;overflow:auto;font-size:12.5px;color:#1f2a3d;padding:2px 4px}
 .bt-det-row{padding:5px 0;border-bottom:1px dashed #e9eef7;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .bt-det-row:last-child{border-bottom:0}
+.dyn-group{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#f7f9fd;border:1px solid #e9eef7;
+  border-radius:12px;padding:10px 14px;margin-top:9px}
+.dg-tag{font-weight:800;color:#e23b3b;background:#fff;border:1px solid #ffd2c6;border-radius:9px;
+  padding:4px 10px;font-size:12.5px;flex:none}
+.dyn-group label{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:#4a5568;font-weight:600}
+.dyn-group .pm{color:#8b95a7;font-size:11.5px;margin-left:auto}
+.dyn-res{border:1px solid #e9eef7;border-radius:14px;padding:14px 16px;margin-top:12px}
+.dyn-res h3{margin:0;font-size:15px;color:#1c2434}
 @media(max-width:640px){
   .hero{padding:22px 20px}.hero h1{font-size:21px}
   .card{padding:18px 16px}
@@ -335,6 +343,18 @@ tbody tr:hover{background:#fafcff}
   <section class="card">
     <h2>分析参数</h2>
     <div class="hint">选择你要投注的号码个数（也可点「✎ 更多」手工输入），点击下方按钮开始推理。选择个数超过标准（红球6个 / 蓝球1个）即为「复式投注」。</div>
+
+    <div class="ctrl">
+      <div class="lbl">分析数据范围 <span>（推荐号码所依据的历史开奖，默认最近100期，也可自定义起止期号）</span></div>
+      <div class="seg strategy" id="segRange"></div>
+      <div class="bt-range" id="rangeCustom" style="display:none;margin-top:9px">
+        <span class="rl">从</span>
+        <select id="anaFrom" title="起始期号"></select>
+        <span class="rl">至</span>
+        <select id="anaTo" title="结束期号"></select>
+        <span class="rl" id="anaCount"></span>
+      </div>
+    </div>
 
     <div class="ctrl">
       <div class="lbl">红球个数 <span>（从 1-33 中选出 N 个，标准为 6 个）</span></div>
@@ -547,6 +567,30 @@ tbody tr:hover{background:#fafcff}
         <div class="rate-wrap"><table class="lb-table" id="btTable"></table></div>
       </div>
       <div class="note" style="margin-top:14px">收益率为「总奖金 ÷ 总投入」。多数方案的收益率会明显低于 100%——这正是彩票返奖率约 51% 的体现，请把本页当作娱乐测试，理性购彩。</div>
+    </section>
+
+    <section class="card">
+      <h2>动态分析（多组自动推荐对比）</h2>
+      <div class="hint">配置 N 组方案参数，系统按每组的历史期数窗口自动生成推荐号码，并模拟回测各组表现，最后汇总对比——用于横向比较不同覆盖范围 / 数据窗口的推荐效果。</div>
+      <div class="ctrl">
+        <div class="lbl">组数 N <span>（每组独立配置，逐组执行：生成推荐 → 回测 → 显示结果）</span></div>
+        <div class="seg strategy" id="dynSegN"></div>
+      </div>
+      <div id="dynGroups"></div>
+      <button class="btn-go" id="dynRun" style="margin-top:14px">开 始 动 态 分 析</button>
+    </section>
+
+    <section class="card" id="dynOut" style="display:none">
+      <div class="res-head">
+        <h2>动态分析结果</h2>
+        <div class="badge" id="dynBadge"></div>
+      </div>
+      <div id="dynResults"></div>
+      <div class="grp" style="margin-top:20px">
+        <div class="gt">各组汇总对比</div>
+        <div class="rate-wrap"><table class="lb-table" id="dynTable"></table></div>
+      </div>
+      <div class="note" style="margin-top:14px">各组推荐号码由历史统计自动生成（均衡策略），仅在覆盖范围与数据窗口上不同。中奖率是组合数学的固定值——组间差异主要来自投注金额，请理性看待。</div>
     </section>
   </div>
 
@@ -880,7 +924,8 @@ if (typeof module !== 'undefined' && module.exports) {
 /* ==================== UI ==================== */
 (function () {
   const $ = s => document.querySelector(s);
-  const state = { strategy: 'balanced', reds: 8, blues: 2, count: 3 };
+  const state = { strategy: 'balanced', reds: 8, blues: 2, count: 3, range: 100 };
+  let ANA_DRAWS = DRAWS.slice();   // 分析数据窗口(默认最近100期, 可自定义)
   const STRAT_NAME = { balanced: '均衡推荐', hot: '热号追踪', cold: '冷号回补' };
 
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
@@ -889,6 +934,62 @@ if (typeof module !== 'undefined' && module.exports) {
   }
 
   /* ---------- 控件 ---------- */
+  /* 分析数据范围: 预设最近N期 + 自定义起止期号 */
+  function fillAnaSelects() {
+    const opts = DRAWS.map(d => '<option value="' + d.i + '">' + d.i + '（' + d.d.slice(5) + '）</option>').join('');
+    $('#anaFrom').innerHTML = opts;
+    $('#anaTo').innerHTML = opts;
+    $('#anaFrom').selectedIndex = Math.max(0, DRAWS.length - 100);
+    $('#anaTo').selectedIndex = DRAWS.length - 1;
+  }
+  function applyAnaRange() {
+    const arr = DRAWS;
+    if (state.range === 'custom') {
+      const i1 = arr.findIndex(d => d.i === $('#anaFrom').value);
+      const i2 = arr.findIndex(d => d.i === $('#anaTo').value);
+      const lo = (i1 >= 0 && i2 >= 0) ? Math.min(i1, i2) : 0;
+      const hi = (i1 >= 0 && i2 >= 0) ? Math.max(i1, i2) : arr.length - 1;
+      ANA_DRAWS = arr.slice(lo, hi + 1);
+    } else {
+      ANA_DRAWS = arr.slice(Math.max(0, arr.length - state.range));
+    }
+    const cnt = document.getElementById('anaCount');
+    if (cnt) cnt.textContent = '共 ' + ANA_DRAWS.length + ' 期';
+    return ANA_DRAWS;
+  }
+  function buildRangeSeg() {
+    const seg = $('#segRange');
+    [100, 50, 30].forEach(k => {
+      const b = document.createElement('button');
+      b.textContent = '最近' + k + '期';
+      b.dataset.v = k;
+      if (k === state.range) b.className = 'on';
+      b.onclick = () => {
+        state.range = k;
+        [].forEach.call(seg.querySelectorAll('button'), c => c.className = (c.dataset.v === String(k) ? 'on' : ''));
+        $('#rangeCustom').style.display = 'none';
+        applyAnaRange();
+        renderAll(true);
+      };
+      seg.appendChild(b);
+    });
+    const more = document.createElement('button');
+    more.textContent = '✎ 自定义';
+    more.dataset.v = 'custom';
+    more.title = '选择指定的起止期号';
+    more.onclick = () => {
+      state.range = 'custom';
+      [].forEach.call(seg.querySelectorAll('button'), c => c.className = (c.dataset.v === 'custom' ? 'on' : ''));
+      $('#rangeCustom').style.display = '';
+      applyAnaRange();
+      renderAll(true);
+    };
+    seg.appendChild(more);
+    fillAnaSelects();
+    $('#anaFrom').onchange = $('#anaTo').onchange = function () { applyAnaRange(); renderAll(true); };
+    applyAnaRange();
+  }
+
   /* 数字段选择器: 预设按钮 + 「✎ 更多」手工输入(1 ~ max) */
   function buildNumSeg(seg, list, max, getV, setV) {
     function mark(v) {
@@ -1015,7 +1116,7 @@ if (typeof module !== 'undefined' && module.exports) {
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, W, H);
 
-    const sums = DRAWS.map(d => d.r.reduce((a, b) => a + b, 0));
+    const sums = ANA_DRAWS.map(d => d.r.reduce((a, b) => a + b, 0));
     const avg = sums.reduce((a, b) => a + b, 0) / sums.length;
     const lo = Math.min.apply(null, sums), hi = Math.max.apply(null, sums);
     const min = Math.floor((lo - 6) / 10) * 10, max = Math.ceil((hi + 6) / 10) * 10;
@@ -1063,7 +1164,7 @@ if (typeof module !== 'undefined' && module.exports) {
     // X 轴标签
     g.fillStyle = '#98a2b3'; g.font = '11px system-ui,sans-serif'; g.textAlign = 'center';
     [0, Math.floor((sums.length - 1) / 2), sums.length - 1].forEach(i => {
-      g.fillText(DRAWS[i].i, X(i), H - 8);
+      g.fillText(ANA_DRAWS[i].i, X(i), H - 8);
     });
   }
 
@@ -1208,7 +1309,7 @@ if (typeof module !== 'undefined' && module.exports) {
   /* ---------- 渲染结果 ---------- */
   function renderResult(plan, noScroll) {
     window.__lastPlan = plan;   // 供购买成功后刷新按钮状态
-    const bt = backtest(DRAWS, state.strategy, state.reds, state.blues, 30);
+    const bt = backtest(ANA_DRAWS, state.strategy, state.reds, state.blues, 30);
     const isSingleMode = (plan.m === 6 && plan.n === 1);  // 仅 6红+1蓝 按单式推荐展示; 6红+多蓝 仍是复式
     const pSingle = pWinSingle();
     const pPlanExact = pWinCompound(plan.m, plan.n);
@@ -1345,14 +1446,16 @@ if (typeof module !== 'undefined' && module.exports) {
 
   /* ---------- 渲染整页(数据更新后可重复调用) ---------- */
   function renderAll(noScroll) {
+    if ($('#anaFrom').options.length !== DRAWS.length) fillAnaSelects();   // 数据更新后重建期号选项
+    applyAnaRange();
     renderHero();
     renderHistory();
-    const st = buildStats(DRAWS);
+    const st = buildStats(ANA_DRAWS);
     renderMatrix('#matrixRed', st.redFreq, st.redOmis, RED_MAX, true);
     renderMatrix('#matrixBlue', st.blueFreq, st.blueOmis, BLUE_MAX, false);
     drawSumChart();
     if ($('#result').classList.contains('show')) {
-      try { renderResult(makePlan(DRAWS, state.strategy, state.reds, state.blues, state.count), true); } catch (e) { console.error(e); }
+      try { renderResult(makePlan(ANA_DRAWS, state.strategy, state.reds, state.blues, state.count), true); } catch (e) { console.error(e); }
     }
   }
 
@@ -1470,6 +1573,7 @@ if (typeof module !== 'undefined' && module.exports) {
   function init() {
     if (!DRAWS.length) { alert('开奖数据为空'); return; }
     buildSegments();
+    buildRangeSeg();
     renderAll();
     $('#syncStatus').onclick = autoRefresh;
 
@@ -1479,7 +1583,7 @@ if (typeof module !== 'undefined' && module.exports) {
       btn.disabled = true;
       setTimeout(function () {
         try {
-          renderResult(makePlan(DRAWS, state.strategy, state.reds, state.blues, state.count));
+          renderResult(makePlan(ANA_DRAWS, state.strategy, state.reds, state.blues, state.count));
         } catch (e) {
           console.error(e);
           alert('计算出错：' + e.message);
@@ -1901,7 +2005,7 @@ if (typeof module !== 'undefined' && module.exports) {
     $('#navRecords').className = p === 'records' ? 'on' : '';
     $('#navAnalysis').className = p === 'analysis' ? 'on' : '';
     if (p === 'records') { renderPurchases(); renderLeaderboard(); }
-    if (p === 'analysis') initBt();
+    if (p === 'analysis') { initBt(); initDyn(); }
     window.scrollTo({ top: 0 });
   }
 
@@ -1929,7 +2033,7 @@ if (typeof module !== 'undefined' && module.exports) {
   }
   function btQuickButtons() {
     const seg = $('#btQuick');
-    [10, 20, 30, 50, 100].forEach(k => {
+    [5, 10, 20, 30, 50, 100].forEach(k => {
       const b = document.createElement('button');
       b.textContent = '最近' + k + '期';
       b.onclick = () => {
@@ -1941,6 +2045,17 @@ if (typeof module !== 'undefined' && module.exports) {
       };
       seg.appendChild(b);
     });
+    const single = document.createElement('button');
+    single.textContent = '指定某期';
+    single.title = '在下方"自定义范围"里把"从"和"至"选成同一期号，即只分析该期';
+    single.onclick = () => {
+      const arr = DRAWS || [], n = arr.length;
+      if (!n) return;
+      $('#btFrom').selectedIndex = n - 1;
+      $('#btTo').selectedIndex = n - 1;
+      runBt();
+    };
+    seg.appendChild(single);
   }
   function btPeriods() {
     const arr = DRAWS || [];
@@ -2109,6 +2224,108 @@ if (typeof module !== 'undefined' && module.exports) {
     if (!btInited) { $('#btRun').onclick = runBt; btInited = true; }
     btRenderPlans();
     runBt();
+  }
+
+  /* ---------- 动态分析(多组自动推荐对比) ---------- */
+  function dynBuildGroups(n) {
+    const wrap = $('#dynGroups');
+    let html = '';
+    for (let i = 1; i <= n; i++) {
+      /* 各组默认参数错开, 方便直接对比 */
+      const defs = [[8, 2, 100], [6, 1, 100], [10, 3, 100], [12, 4, 100], [9, 2, 50], [7, 1, 50], [11, 2, 30], [6, 3, 30]];
+      const d = defs[(i - 1) % defs.length];
+      html += '<div class="dyn-group"><span class="dg-tag">组 ' + i + '</span>' +
+        '<label>红球 <input type="number" class="seg-num dyn-m" min="1" max="33" step="1" value="' + d[0] + '"></label>' +
+        '<label>蓝球 <input type="number" class="seg-num dyn-n" min="1" max="16" step="1" value="' + d[1] + '"></label>' +
+        '<label>历史期数 <input type="number" class="seg-num dyn-k" min="10" max="100" step="1" value="' + d[2] + '"> 期</label>' +
+        '<span class="pm">策略：均衡推荐 · 自动生成推荐号码并回测</span></div>';
+    }
+    wrap.innerHTML = html;
+  }
+  function dynSegN() {
+    const seg = $('#dynSegN');
+    [2, 3, 4, 5, 6, 8].forEach(k => {
+      const b = document.createElement('button');
+      b.textContent = k + ' 组';
+      b.dataset.v = k;
+      if (k === 3) b.className = 'on';
+      b.onclick = () => {
+        [].forEach.call(seg.children, c => c.className = (+c.dataset.v === k ? 'on' : ''));
+        dynBuildGroups(k);
+      };
+      seg.appendChild(b);
+    });
+    dynBuildGroups(3);
+  }
+  function dynRun() {
+    const cfgs = [];
+    const groups = document.querySelectorAll('#dynGroups .dyn-group');
+    for (let i = 0; i < groups.length; i++) {
+      const g = groups[i];
+      const m = Math.round(+g.querySelector('.dyn-m').value);
+      const n = Math.round(+g.querySelector('.dyn-n').value);
+      const k = Math.round(+g.querySelector('.dyn-k').value);
+      if (!(m >= 1 && m <= 33)) { toast('组 ' + (i + 1) + '：红球个数需在 1-33 之间'); return; }
+      if (!(n >= 1 && n <= 16)) { toast('组 ' + (i + 1) + '：蓝球个数需在 1-16 之间'); return; }
+      if (!(k >= 10 && k <= DRAWS.length)) { toast('组 ' + (i + 1) + '：历史期数需在 10-' + DRAWS.length + ' 之间'); return; }
+      cfgs.push({ m: m, n: n, k: k });
+    }
+    if (!cfgs.length) { toast('请至少配置一组'); return; }
+    const btn = $('#dynRun');
+    btn.textContent = '分 析 中...';
+    btn.disabled = true;
+    setTimeout(function () {
+      try {
+        const results = cfgs.map((c, i) => {
+          const hist = DRAWS.slice(Math.max(0, DRAWS.length - c.k));
+          const plan = makePlan(hist, 'balanced', c.m, c.n, 3);
+          const p = pWinCompound(c.m, c.n);
+          const jack = pJackpot(c.m, c.n);
+          const btk = hist.length >= 45
+            ? backtest(hist, 'balanced', c.m, c.n, Math.min(30, hist.length - 40))
+            : null;
+          return { i: i + 1, c: c, plan: plan, p: p, jack: jack, btk: btk };
+        });
+        /* 每组结果卡片 */
+        $('#dynBadge').textContent = '共 ' + results.length + ' 组';
+        $('#dynResults').innerHTML = results.map(r =>
+          '<div class="dyn-res"><div class="res-head"><h3>组 ' + r.i + ' · ' + r.c.m + '红+' + r.c.n +
+          '蓝 · 依据最近 ' + r.c.k + ' 期</h3><div class="badge">' + r.plan.bets + ' 注 · ¥' +
+          fmt(r.plan.cost) + '</div></div>' +
+          '<div style="margin-top:9px">' + ballsHTML(r.plan.reds, r.plan.blues) + '</div>' +
+          '<div class="note" style="margin-top:9px">任意奖等中奖率 <b>' + (r.p * 100).toFixed(2) +
+          '%</b> · 一等奖概率 <b>1 / ' + Math.round(1 / r.jack).toLocaleString('en-US') + '</b>' +
+          (r.btk ? ' · 近 ' + r.btk.cnt + ' 期模拟平均命中红球 <b>' + r.btk.avgRedHit.toFixed(2) +
+            '</b> 个（随机基准 ' + r.btk.baseRedHit.toFixed(2) + '），蓝球命中率 ' +
+            (r.btk.blueRate * 100).toFixed(0) + '%' : '') + '</div></div>'
+        ).join('');
+        /* 汇总对比表 */
+        let html = '<thead><tr><th>组</th><th>规格</th><th>历史期数</th><th>总注数</th><th>合计金额</th>' +
+          '<th>中奖率(任意奖)</th><th>一等奖概率</th><th>模拟平均命中红球</th></tr></thead><tbody>';
+        results.forEach(r => {
+          html += '<tr><td class="lb-rank">组 ' + r.i + '</td>' +
+            '<td>' + r.c.m + '红+' + r.c.n + '蓝</td>' +
+            '<td>' + r.c.k + ' 期</td>' +
+            '<td>' + r.plan.bets + '</td>' +
+            '<td>¥' + fmt(r.plan.cost) + '</td>' +
+            '<td><b style="color:#e23b3b">' + (r.p * 100).toFixed(2) + '%</b></td>' +
+            '<td>1 / ' + Math.round(1 / r.jack).toLocaleString('en-US') + '</td>' +
+            '<td>' + (r.btk ? r.btk.avgRedHit.toFixed(2) + ' 个' : '<span style="color:#94a3b8">—</span>') + '</td></tr>';
+        });
+        $('#dynTable').innerHTML = html + '</tbody>';
+        $('#dynOut').style.display = '';
+        $('#dynOut').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (e) {
+        console.error(e);
+        toast('动态分析出错：' + e.message);
+      }
+      btn.textContent = '开 始 动 态 分 析';
+      btn.disabled = false;
+    }, 30);
+  }
+  let dynInited = false;
+  function initDyn() {
+    if (!dynInited) { dynSegN(); $('#dynRun').onclick = dynRun; dynInited = true; }
   }
 
   /* 删除单条购买记录: 记录本人或管理员可操作 */
