@@ -577,7 +577,7 @@ tbody tr:hover{background:#fafcff}
 
     <section class="card">
       <h2>动态分析（多组自动推荐对比）</h2>
-      <div class="hint">配置 N 组方案参数，系统按每组的历史期数窗口自动生成推荐号码，并模拟回测各组表现，最后汇总对比——用于横向比较不同覆盖范围 / 数据窗口的推荐效果。每组可单独选择「匹配范围」（用开奖号码逐期核对推荐方案的中奖情况），结果里点「命中明细」可展开查看中了哪几期、各多少奖金。</div>
+      <div class="hint">配置 N 组方案参数，系统按每组的历史期数窗口自动生成推荐号码，并模拟回测各组表现，最后汇总对比——用于横向比较不同覆盖范围 / 数据窗口的推荐效果。每组可单独选择「匹配范围」（预设最近 10~100 期 / 全部 / ✎ 自定义起止期号，用开奖号码逐期核对推荐方案的中奖情况），结果里点「命中明细」可展开查看中了哪几期、各多少奖金。</div>
       <div class="ctrl">
         <div class="lbl">组数 N <span>（每组独立配置，逐组执行：生成推荐 → 回测 → 显示结果）</span></div>
         <div class="seg strategy" id="dynSegN"></div>
@@ -2242,15 +2242,39 @@ if (typeof module !== 'undefined' && module.exports) {
       const d = defs[(i - 1) % defs.length];
       const rangeOpts = [10, 20, 30, 50, 100].map(k =>
         '<option value="' + k + '"' + (k === 30 ? ' selected' : '') + '>最近 ' + k + ' 期</option>').join('') +
-        '<option value="all">全部期数</option>';
+        '<option value="all">全部期数</option>' +
+        '<option value="custom">✎ 自定义…</option>';
+      const issOpts = DRAWS.map(dr => '<option value="' + esc(dr.i) + '">' + esc(dr.i) + '（' + esc(dr.d.slice(5)) + '）</option>').join('');
       html += '<div class="dyn-group"><span class="dg-tag">组 ' + i + '</span>' +
         '<label>红球 <input type="number" class="seg-num dyn-m" min="1" max="33" step="1" value="' + d[0] + '"></label>' +
         '<label>蓝球 <input type="number" class="seg-num dyn-n" min="1" max="16" step="1" value="' + d[1] + '"></label>' +
         '<label>历史期数 <input type="number" class="seg-num dyn-k" min="10" max="100" step="1" value="' + d[2] + '"> 期</label>' +
         '<label>匹配范围 <select class="dyn-range">' + rangeOpts + '</select></label>' +
+        '<span class="dyn-custom" style="display:none;align-items:center;gap:6px;font-size:12.5px;color:#4a5568;font-weight:600">' +
+          '<select class="dyn-from">' + issOpts + '</select><span>至</span>' +
+          '<select class="dyn-to">' + issOpts + '</select></span>' +
         '<span class="pm">策略：均衡推荐 · 自动生成推荐号码并回测</span></div>';
     }
     wrap.innerHTML = html;
+    /* 匹配范围切换: 选「✎ 自定义」时显示起止期号选择 */
+    wrap.querySelectorAll('.dyn-group').forEach(g => {
+      const cus = g.querySelector('.dyn-custom');
+      const sel = g.querySelector('.dyn-range');
+      const sync = () => {
+        const on = sel.value === 'custom';
+        cus.style.display = on ? 'inline-flex' : 'none';
+        if (on) {
+          const f = g.querySelector('.dyn-from'), t = g.querySelector('.dyn-to');
+          if (!f.dataset.init) {
+            f.selectedIndex = Math.max(0, DRAWS.length - 30);
+            t.selectedIndex = DRAWS.length - 1;
+            f.dataset.init = '1'; t.dataset.init = '1';
+          }
+        }
+      };
+      sel.onchange = sync;
+      sync();
+    });
   }
   function dynSegN() {
     const seg = $('#dynSegN');
@@ -2267,6 +2291,13 @@ if (typeof module !== 'undefined' && module.exports) {
     });
     dynBuildGroups(3);
   }
+  /* 匹配范围显示文案 */
+  function rangeLabel(r) {
+    const len = DRAWS.length;
+    if (r.c.rFrom === 0 && r.c.rTo === len - 1) return '全部 ' + r.match.cnt + ' 期';
+    if (r.c.rTo === len - 1) return '最近 ' + r.match.cnt + ' 期';
+    return DRAWS[r.c.rFrom].i + ' ~ ' + DRAWS[r.c.rTo].i + '（' + r.match.cnt + ' 期）';
+  }
   function dynRun() {
     const cfgs = [];
     const groups = document.querySelectorAll('#dynGroups .dyn-group');
@@ -2276,12 +2307,21 @@ if (typeof module !== 'undefined' && module.exports) {
       const n = Math.round(+g.querySelector('.dyn-n').value);
       const k = Math.round(+g.querySelector('.dyn-k').value);
       const rv = g.querySelector('.dyn-range').value;
-      const rk = rv === 'all' ? DRAWS.length : Math.round(+rv);
+      /* 匹配范围 → 起止索引(rFrom/rTo, 基于 DRAWS 0起) */
+      let rFrom, rTo;
+      if (rv === 'all') { rFrom = 0; rTo = DRAWS.length - 1; }
+      else if (rv === 'custom') {
+        const fi = DRAWS.findIndex(d => d.i === g.querySelector('.dyn-from').value);
+        const ti = DRAWS.findIndex(d => d.i === g.querySelector('.dyn-to').value);
+        if (fi < 0 || ti < 0) { toast('组 ' + (i + 1) + '：自定义匹配范围无效'); return; }
+        rFrom = Math.min(fi, ti); rTo = Math.max(fi, ti);
+      }
+      else { rFrom = DRAWS.length - Math.round(+rv); rTo = DRAWS.length - 1; }
       if (!(m >= 1 && m <= 33)) { toast('组 ' + (i + 1) + '：红球个数需在 1-33 之间'); return; }
       if (!(n >= 1 && n <= 16)) { toast('组 ' + (i + 1) + '：蓝球个数需在 1-16 之间'); return; }
       if (!(k >= 10 && k <= DRAWS.length)) { toast('组 ' + (i + 1) + '：历史期数需在 10-' + DRAWS.length + ' 之间'); return; }
-      if (!(rk >= 1 && rk <= DRAWS.length)) { toast('组 ' + (i + 1) + '：匹配范围需在 1-' + DRAWS.length + ' 之间'); return; }
-      cfgs.push({ m: m, n: n, k: k, rk: rk });
+      if (!(rTo >= rFrom && rFrom >= 0 && rTo < DRAWS.length)) { toast('组 ' + (i + 1) + '：匹配范围无效'); return; }
+      cfgs.push({ m: m, n: n, k: k, rFrom: rFrom, rTo: rTo });
     }
     if (!cfgs.length) { toast('请至少配置一组'); return; }
     const btn = $('#dynRun');
@@ -2298,7 +2338,7 @@ if (typeof module !== 'undefined' && module.exports) {
             ? backtest(hist, 'balanced', c.m, c.n, Math.min(30, hist.length - 40))
             : null;
           /* 按该组匹配范围逐期判奖 */
-          const mPeriods = DRAWS.slice(Math.max(0, DRAWS.length - c.rk));
+          const mPeriods = DRAWS.slice(c.rFrom, c.rTo + 1);
           let mWin = 0, mHits = 0;
           const hitList = [];
           mPeriods.forEach(d => {
@@ -2325,8 +2365,7 @@ if (typeof module !== 'undefined' && module.exports) {
           (r.btk ? ' · 近 ' + r.btk.cnt + ' 期模拟平均命中红球 <b>' + r.btk.avgRedHit.toFixed(2) +
             '</b> 个（随机基准 ' + r.btk.baseRedHit.toFixed(2) + '），蓝球命中率 ' +
             (r.btk.blueRate * 100).toFixed(0) + '%' : '') + '</div>' +
-          '<div class="dyn-match"><b>中奖匹配</b><span>范围：' +
-            (r.c.rk === DRAWS.length ? '全部 ' + r.match.cnt + ' 期' : '最近 ' + r.match.cnt + ' 期') + '</span>' +
+          '<div class="dyn-match"><b>中奖匹配</b><span>范围：' + rangeLabel(r) + '</span>' +
             '<span>命中 <span class="dm-num">' + r.match.hits + '</span> / ' + r.match.cnt + ' 期</span>' +
             '<span>总投入 <span class="dm-num">¥' + fmt(r.match.invest) + '</span></span>' +
             '<span>总奖金 <span class="dm-num">¥' + fmt(r.match.win) + '</span></span>' +
@@ -2362,7 +2401,7 @@ if (typeof module !== 'undefined' && module.exports) {
           html += '<tr><td class="lb-rank">组 ' + r.i + '</td>' +
             '<td>' + r.c.m + '红+' + r.c.n + '蓝</td>' +
             '<td>' + r.c.k + ' 期</td>' +
-            '<td>' + (r.c.rk === DRAWS.length ? '全部' : '最近 ' + r.c.rk + ' 期') + '</td>' +
+            '<td>' + rangeLabel(r) + '</td>' +
             '<td>' + r.plan.bets + '</td>' +
             '<td>¥' + fmt(r.plan.cost) + '</td>' +
             '<td><b style="color:#e23b3b">' + (r.p * 100).toFixed(2) + '%</b></td>' +
