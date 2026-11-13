@@ -577,7 +577,7 @@ tbody tr:hover{background:#fafcff}
 
     <section class="card">
       <h2>动态分析（多组自动推荐对比）</h2>
-      <div class="hint">配置 N 组方案参数，系统按每组的历史期数窗口自动生成推荐号码，并模拟回测各组表现，最后汇总对比——用于横向比较不同覆盖范围 / 数据窗口的推荐效果。每组可单独选择「匹配范围」（预设最近 10~100 期 / 全部 / ✎ 自定义起止期号，用开奖号码逐期核对推荐方案的中奖情况），结果里点「命中明细」可展开查看中了哪几期、各多少奖金。</div>
+      <div class="hint">配置 N 组方案参数，系统按每组的历史数据窗口自动生成推荐号码，并模拟回测各组表现，最后汇总对比——用于横向比较不同覆盖范围 / 数据窗口的推荐效果。每组「历史期数」可选最近 N 期或「✎ 自定义」任意起止期号区间；每组可单独选择「匹配范围」（预设最近 10~100 期 / 全部 / ✎ 自定义起止期号，用开奖号码逐期核对推荐方案的中奖情况），结果里点「命中明细」可展开查看中了哪几期、各多少奖金。</div>
       <div class="ctrl">
         <div class="lbl">组数 N <span>（每组独立配置，逐组执行：生成推荐 → 回测 → 显示结果）</span></div>
         <div class="seg strategy" id="dynSegN"></div>
@@ -2248,14 +2248,40 @@ if (typeof module !== 'undefined' && module.exports) {
       html += '<div class="dyn-group"><span class="dg-tag">组 ' + i + '</span>' +
         '<label>红球 <input type="number" class="seg-num dyn-m" min="1" max="33" step="1" value="' + d[0] + '"></label>' +
         '<label>蓝球 <input type="number" class="seg-num dyn-n" min="1" max="16" step="1" value="' + d[1] + '"></label>' +
-        '<label>历史期数 <input type="number" class="seg-num dyn-k" min="10" max="100" step="1" value="' + d[2] + '"> 期</label>' +
+        '<label>历史期数 <select class="dyn-hmode"><option value="recent">最近 N 期</option>' +
+          '<option value="custom">✎ 自定义…</option></select></label>' +
+        '<span class="dyn-hrecent"><input type="number" class="seg-num dyn-k" min="10" max="100" step="1" value="' + d[2] + '"> 期</span>' +
+        '<span class="dyn-hcustom" style="display:none;align-items:center;gap:6px;font-size:12.5px;color:#4a5568;font-weight:600">' +
+          '起 <select class="dyn-hfrom">' + issOpts + '</select><span>至</span>' +
+          '<select class="dyn-hto">' + issOpts + '</select></span>' +
         '<label>匹配范围 <select class="dyn-range">' + rangeOpts + '</select></label>' +
         '<span class="dyn-custom" style="display:none;align-items:center;gap:6px;font-size:12.5px;color:#4a5568;font-weight:600">' +
+          '<span style="color:#e23b3b;font-size:11.5px;font-weight:800">匹配</span>' +
           '<select class="dyn-from">' + issOpts + '</select><span>至</span>' +
           '<select class="dyn-to">' + issOpts + '</select></span>' +
         '<span class="pm">策略：均衡推荐 · 自动生成推荐号码并回测</span></div>';
     }
     wrap.innerHTML = html;
+    /* 历史期数切换: 选「✎ 自定义」时用起止期号指定历史数据窗口 */
+    wrap.querySelectorAll('.dyn-group').forEach(g => {
+      const hm = g.querySelector('.dyn-hmode');
+      const hRecent = g.querySelector('.dyn-hrecent'), hCus = g.querySelector('.dyn-hcustom');
+      const hsync = () => {
+        const on = hm.value === 'custom';
+        hRecent.style.display = on ? 'none' : '';
+        hCus.style.display = on ? 'inline-flex' : 'none';
+        if (on) {
+          const f = g.querySelector('.dyn-hfrom'), t = g.querySelector('.dyn-hto');
+          if (!f.dataset.init) {
+            f.selectedIndex = Math.max(0, DRAWS.length - 30);
+            t.selectedIndex = DRAWS.length - 1;
+            f.dataset.init = '1'; t.dataset.init = '1';
+          }
+        }
+      };
+      hm.onchange = hsync;
+      hsync();
+    });
     /* 匹配范围切换: 选「✎ 自定义」时显示起止期号选择 */
     wrap.querySelectorAll('.dyn-group').forEach(g => {
       const cus = g.querySelector('.dyn-custom');
@@ -2291,6 +2317,12 @@ if (typeof module !== 'undefined' && module.exports) {
     });
     dynBuildGroups(3);
   }
+  /* 历史数据窗口显示文案 */
+  function histLabel(c) {
+    if (c.hMode === 'custom')
+      return DRAWS[c.hFrom].i + ' ~ ' + DRAWS[c.hTo].i + '（' + (c.hTo - c.hFrom + 1) + ' 期）';
+    return '最近 ' + (c.hTo - c.hFrom + 1) + ' 期';
+  }
   /* 匹配范围显示文案 */
   function rangeLabel(r) {
     const len = DRAWS.length;
@@ -2306,7 +2338,20 @@ if (typeof module !== 'undefined' && module.exports) {
       const m = Math.round(+g.querySelector('.dyn-m').value);
       const n = Math.round(+g.querySelector('.dyn-n').value);
       const k = Math.round(+g.querySelector('.dyn-k').value);
+      const hMode = g.querySelector('.dyn-hmode').value;
       const rv = g.querySelector('.dyn-range').value;
+      /* 历史数据窗口 → 起止索引(hFrom/hTo) */
+      let hFrom, hTo;
+      if (hMode === 'custom') {
+        const fi = DRAWS.findIndex(d => d.i === g.querySelector('.dyn-hfrom').value);
+        const ti = DRAWS.findIndex(d => d.i === g.querySelector('.dyn-hto').value);
+        if (fi < 0 || ti < 0) { toast('组 ' + (i + 1) + '：自定义历史期数范围无效'); return; }
+        hFrom = Math.min(fi, ti); hTo = Math.max(fi, ti);
+      } else {
+        if (!(k >= 10 && k <= DRAWS.length)) { toast('组 ' + (i + 1) + '：历史期数需在 10-' + DRAWS.length + ' 之间'); return; }
+        hFrom = DRAWS.length - k; hTo = DRAWS.length - 1;
+      }
+      if (hTo - hFrom + 1 < 10) { toast('组 ' + (i + 1) + '：历史数据窗口至少需要 10 期'); return; }
       /* 匹配范围 → 起止索引(rFrom/rTo, 基于 DRAWS 0起) */
       let rFrom, rTo;
       if (rv === 'all') { rFrom = 0; rTo = DRAWS.length - 1; }
@@ -2319,9 +2364,8 @@ if (typeof module !== 'undefined' && module.exports) {
       else { rFrom = DRAWS.length - Math.round(+rv); rTo = DRAWS.length - 1; }
       if (!(m >= 1 && m <= 33)) { toast('组 ' + (i + 1) + '：红球个数需在 1-33 之间'); return; }
       if (!(n >= 1 && n <= 16)) { toast('组 ' + (i + 1) + '：蓝球个数需在 1-16 之间'); return; }
-      if (!(k >= 10 && k <= DRAWS.length)) { toast('组 ' + (i + 1) + '：历史期数需在 10-' + DRAWS.length + ' 之间'); return; }
       if (!(rTo >= rFrom && rFrom >= 0 && rTo < DRAWS.length)) { toast('组 ' + (i + 1) + '：匹配范围无效'); return; }
-      cfgs.push({ m: m, n: n, k: k, rFrom: rFrom, rTo: rTo });
+      cfgs.push({ m: m, n: n, hMode: hMode, hFrom: hFrom, hTo: hTo, rFrom: rFrom, rTo: rTo });
     }
     if (!cfgs.length) { toast('请至少配置一组'); return; }
     const btn = $('#dynRun');
@@ -2330,7 +2374,7 @@ if (typeof module !== 'undefined' && module.exports) {
     setTimeout(function () {
       try {
         const results = cfgs.map((c, i) => {
-          const hist = DRAWS.slice(Math.max(0, DRAWS.length - c.k));
+          const hist = DRAWS.slice(c.hFrom, c.hTo + 1);
           const plan = makePlan(hist, 'balanced', c.m, c.n, 3);
           const p = pWinCompound(c.m, c.n);
           const jack = pJackpot(c.m, c.n);
@@ -2357,7 +2401,7 @@ if (typeof module !== 'undefined' && module.exports) {
         $('#dynBadge').textContent = '共 ' + results.length + ' 组';
         $('#dynResults').innerHTML = results.map(r =>
           '<div class="dyn-res"><div class="res-head"><h3>组 ' + r.i + ' · ' + r.c.m + '红+' + r.c.n +
-          '蓝 · 依据最近 ' + r.c.k + ' 期</h3><div class="badge">' + r.plan.bets + ' 注 · ¥' +
+          '蓝 · 依据 ' + histLabel(r.c) + '</h3><div class="badge">' + r.plan.bets + ' 注 · ¥' +
           fmt(r.plan.cost) + '</div></div>' +
           '<div style="margin-top:9px">' + ballsHTML(r.plan.reds, r.plan.blues) + '</div>' +
           '<div class="note" style="margin-top:9px">任意奖等中奖率 <b>' + (r.p * 100).toFixed(2) +
@@ -2394,13 +2438,13 @@ if (typeof module !== 'undefined' && module.exports) {
           };
         });
         /* 汇总对比表 */
-        let html = '<thead><tr><th>组</th><th>规格</th><th>历史期数</th><th>匹配范围</th><th>总注数</th><th>合计金额</th>' +
+        let html = '<thead><tr><th>组</th><th>规格</th><th>历史数据窗口</th><th>匹配范围</th><th>总注数</th><th>合计金额</th>' +
           '<th>中奖率(任意奖)</th><th>一等奖概率</th><th>命中期数</th><th>匹配总奖金</th><th>匹配收益率</th>' +
           '<th>模拟平均命中红球</th></tr></thead><tbody>';
         results.forEach(r => {
           html += '<tr><td class="lb-rank">组 ' + r.i + '</td>' +
             '<td>' + r.c.m + '红+' + r.c.n + '蓝</td>' +
-            '<td>' + r.c.k + ' 期</td>' +
+            '<td>' + histLabel(r.c) + '</td>' +
             '<td>' + rangeLabel(r) + '</td>' +
             '<td>' + r.plan.bets + '</td>' +
             '<td>¥' + fmt(r.plan.cost) + '</td>' +
@@ -2422,9 +2466,30 @@ if (typeof module !== 'undefined' && module.exports) {
       btn.disabled = false;
     }, 30);
   }
-  let dynInited = false;
+  let dynInited = false, dynDrawsLen = 0;
+  /* 数据更新后刷新所有期号下拉选项, 并尽量保留已选值 */
+  function dynRefreshIssueOptions() {
+    const opts = DRAWS.map(dr => '<option value="' + esc(dr.i) + '">' + esc(dr.i) + '（' + esc(dr.d.slice(5)) + '）</option>').join('');
+    document.querySelectorAll('#dynGroups .dyn-group').forEach(g => {
+      ['.dyn-hfrom', '.dyn-hto', '.dyn-from', '.dyn-to'].forEach(cls => {
+        const el = g.querySelector(cls);
+        if (!el) return;
+        const old = el.value;
+        el.innerHTML = opts;
+        if (old && DRAWS.some(d => d.i === old)) el.value = old;
+        else el.selectedIndex = cls.indexOf('-to') >= 0 || cls === '.dyn-hto'
+          ? DRAWS.length - 1 : Math.max(0, DRAWS.length - 30);
+      });
+    });
+  }
   function initDyn() {
-    if (!dynInited) { dynSegN(); $('#dynRun').onclick = dynRun; dynInited = true; }
+    if (!dynInited) {
+      dynSegN(); $('#dynRun').onclick = dynRun;
+      dynInited = true; dynDrawsLen = DRAWS.length;
+    } else if (dynDrawsLen !== DRAWS.length) {
+      dynRefreshIssueOptions();
+      dynDrawsLen = DRAWS.length;
+    }
   }
 
   /* 删除单条购买记录: 记录本人或管理员可操作 */
