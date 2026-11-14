@@ -210,7 +210,11 @@ body{
 .rate-table td.p{color:#e23b3b;font-weight:800}
 .rate-table td.d{color:#0b8f4d;font-weight:700;font-size:12.5px}
 .rate-table tr.cur td{background:#fff7f4}
-.rate-wrap{border:1px solid #eef1f7;border-radius:14px;overflow:hidden}
+.rate-wrap{border:1px solid #eef1f7;border-radius:14px;overflow-x:auto;overflow-y:hidden}
+.rate-wrap .lb-table{min-width:600px}
+#dynTable{min-width:960px}
+.rate-wrap::-webkit-scrollbar{height:7px}
+.rate-wrap::-webkit-scrollbar-thumb{background:#d7dfea;border-radius:8px}
 
 /* 真相说明卡 */
 .truth{display:grid;gap:10px}
@@ -266,9 +270,10 @@ tbody tr:hover{background:#fafcff}
 .bt-range select{border:1.5px solid #e3e8f2;border-radius:10px;padding:8px 11px;font-size:13px;font-family:inherit;
   background:#fff;color:#1f2a3d;cursor:pointer;font-variant-numeric:tabular-nums}
 .bt-range select:focus{outline:0;border-color:#e23b3b}
-.bt-range .jbtn{background:linear-gradient(135deg,#e23b3b,#f0663a);color:#fff;padding:9px 20px;font-size:13px;
+.bt-range .jbtn,.jbtn.primary{background:linear-gradient(135deg,#e23b3b,#f0663a);color:#fff;padding:9px 20px;font-size:13px;
   box-shadow:0 4px 12px rgba(226,59,59,.3);transition:.16s}
-.bt-range .jbtn:hover{filter:brightness(1.07);transform:translateY(-1px)}
+.bt-range .jbtn:hover,.jbtn.primary:hover{filter:brightness(1.07);transform:translateY(-1px)}
+.jbtn.primary:disabled{opacity:.65;transform:none;filter:none}
 .bt-plans{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .bt-plan{display:inline-flex;align-items:center;gap:6px;border:1.5px solid #e3e8f2;border-radius:11px;
   padding:7px 12px;font-size:12.5px;cursor:pointer;background:#fff;user-select:none;color:#1f2a3d;transition:.14s}
@@ -363,7 +368,7 @@ tbody tr:hover{background:#fafcff}
     </div>
 
     <div class="ctrl">
-      <div class="lbl">红球个数 <span>（从 1-33 中选出 N 个，标准为 6 个）</span></div>
+      <div class="lbl">红球个数 <span>（从 6-33 中选出 N 个，少于 6 个无法组成一注）</span></div>
       <div class="seg" id="segRed"></div>
     </div>
 
@@ -373,7 +378,7 @@ tbody tr:hover{background:#fafcff}
     </div>
 
     <div class="ctrl">
-      <div class="lbl">推荐策略</div>
+      <div class="lbl">推荐策略 <span>（7 种；单注中奖率恒为 6.71%，策略只改变选号偏好）</span></div>
       <div class="seg strategy" id="segStrategy"></div>
     </div>
 
@@ -406,6 +411,16 @@ tbody tr:hover{background:#fafcff}
         把它当娱乐，设好预算，别追号——这是唯一“稳赚”的策略。
       </div></div>
     </div>
+  </section>
+
+  <section class="card" id="stratCard">
+    <div class="res-head">
+      <h2>推荐策略横向回测</h2>
+      <div class="badge" id="stratBadge">未运行</div>
+    </div>
+    <div class="hint">用同一份历史数据、相同的红球/蓝球个数，逐一回测 7 种策略在最近 30 期的表现。判定基准来自 400 次「每期完全随机选号」重复得到的 95% 区间——落在区间内，说明该策略与运气无法区分；前后两段回测用于观察排名是否稳定。</div>
+    <button class="jbtn primary" id="btnStratCmp" style="margin-top:12px;border:0">开 始 回 测 对 比</button>
+    <div id="stratOut" style="margin-top:14px"></div>
   </section>
 
   <section class="card" id="result">
@@ -577,7 +592,7 @@ tbody tr:hover{background:#fafcff}
 
     <section class="card">
       <h2>动态分析（多组自动推荐对比）</h2>
-      <div class="hint">配置 N 组方案参数，系统按每组的历史数据窗口自动生成推荐号码，并模拟回测各组表现，最后汇总对比——用于横向比较不同覆盖范围 / 数据窗口的推荐效果。每组「历史期数」可选最近 N 期或「✎ 自定义」任意起止期号区间；每组可单独选择「匹配范围」（预设最近 10~100 期 / 全部 / ✎ 自定义起止期号，用开奖号码逐期核对推荐方案的中奖情况），结果里点「命中明细」可展开查看中了哪几期、各多少奖金。</div>
+      <div class="hint">配置 N 组方案参数，系统按每组的历史数据窗口自动生成推荐号码，并模拟回测各组表现，最后汇总对比——用于横向比较不同覆盖范围 / 数据窗口的推荐效果。每组「历史期数」可选最近 N 期或「✎ 自定义」任意起止期号区间；每组可单独选择「匹配范围」（预设最近 10~100 期 / 全部 / ✎ 自定义起止期号，用开奖号码逐期核对推荐方案的中奖情况），结果里点「命中明细」可展开查看中了哪几期、各多少奖金。也可给各组指定不同推荐策略，用同一份数据横向对比。</div>
       <div class="ctrl">
         <div class="lbl">组数 N <span>（每组独立配置，逐组执行：生成推荐 → 回测 → 显示结果）</span></div>
         <div class="seg strategy" id="dynSegN"></div>
@@ -596,7 +611,7 @@ tbody tr:hover{background:#fafcff}
         <div class="gt">各组汇总对比</div>
         <div class="rate-wrap"><table class="lb-table" id="dynTable"></table></div>
       </div>
-      <div class="note" style="margin-top:14px">各组推荐号码由历史统计自动生成（均衡策略），仅在覆盖范围与数据窗口上不同。中奖率是组合数学的固定值——组间差异主要来自投注金额，请理性看待。</div>
+      <div class="note" style="margin-top:14px">各组推荐号码由所选策略基于历史统计自动生成，单注中奖率恒为 6.71%——组间差异主要来自投注覆盖金额与号码分散度，不构成预测能力，请理性看待。</div>
     </section>
   </div>
 
@@ -715,11 +730,17 @@ function buildStats(draws) {
   };
 }
 
-/* 红球评分 */
+/* 红球评分。注意: 所有策略只改变「偏好哪些号码」, 不改变单注中奖概率(每期独立)。 */
+function hashRand(a, b) {
+  const x = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453;
+  return x - Math.floor(x);
+}
 function scoreReds(st, strategy) {
   const maxF = Math.max(...st.redFreq.slice(1), 1);
   const maxR = Math.max(...st.redRecent.slice(1), 1);
   const maxO = Math.max(...st.redOmis.slice(1), 1);
+  const pR = 6 / 33, K = 40;
+  const sdR = Math.sqrt(st.recentN * pR * (1 - pR)) || 1;
   const out = [];
   for (let n = 1; n <= RED_MAX; n++) {
     const f = st.redFreq[n] / maxF;          // 全期热度
@@ -728,17 +749,38 @@ function scoreReds(st, strategy) {
     let s;
     if (strategy === 'hot') s = 0.55 * f + 0.45 * r;
     else if (strategy === 'cold') s = 0.62 * o + 0.24 * (1 - r) + 0.14 * (1 - f);
+    else if (strategy === 'bayes') {
+      /* Beta-Binomial 经验贝叶斯: 用 K 期等效先验把观测频次拉向理论概率, 抑制小样本噪声 */
+      const post = (st.redFreq[n] + K * pR) / (st.N + K) / pR;
+      const postR = (st.redRecent[n] + K * pR) / (st.recentN + K) / pR;
+      s = 0.6 * post + 0.4 * postR;
+    }
+    else if (strategy === 'trend') {
+      /* 近期频次相对随机期望的标准化偏离(z-score) */
+      s = (st.redRecent[n] - st.recentN * pR) / sdR;
+    }
+    else if (strategy === 'omission') {
+      /* 当前遗漏相对该号自身历史平均间隔的超期倍数, 对数平滑 */
+      const avgGap = (st.N + 1) / (st.redFreq[n] + 1);
+      s = Math.log(1 + (st.redOmis[n] + 1) / avgGap);
+    }
+    else if (strategy === 'random') {
+      /* 频率轻微加权 + 确定性伪随机(按窗口长度播种, 保证回测可复现) */
+      s = 0.2 * f + 0.8 * hashRand(n, st.N);
+    }
     else s = 0.40 * f + 0.30 * r + 0.30 * o;
     out.push({ n, f, r, o, score: s });
   }
   return out;
 }
 
-/* 蓝球评分 */
+/* 蓝球评分（与红球同构, 理论命中率 1/16） */
 function scoreBlues(st, strategy) {
   const maxF = Math.max(...st.blueFreq.slice(1), 1);
   const maxR = Math.max(...st.blueRecent.slice(1), 1);
   const maxO = Math.max(...st.blueOmis.slice(1), 1);
+  const pB = 1 / 16, K = 40;
+  const sdB = Math.sqrt(st.recentN * pB * (1 - pB)) || 1;
   const out = [];
   for (let n = 1; n <= BLUE_MAX; n++) {
     const f = st.blueFreq[n] / maxF;
@@ -747,6 +789,17 @@ function scoreBlues(st, strategy) {
     let s;
     if (strategy === 'hot') s = 0.55 * f + 0.45 * r;
     else if (strategy === 'cold') s = 0.62 * o + 0.24 * (1 - r) + 0.14 * (1 - f);
+    else if (strategy === 'bayes') {
+      const post = (st.blueFreq[n] + K * pB) / (st.N + K) / pB;
+      const postR = (st.blueRecent[n] + K * pB) / (st.recentN + K) / pB;
+      s = 0.6 * post + 0.4 * postR;
+    }
+    else if (strategy === 'trend') s = (st.blueRecent[n] - st.recentN * pB) / sdB;
+    else if (strategy === 'omission') {
+      const avgGap = (st.N + 1) / (st.blueFreq[n] + 1);
+      s = Math.log(1 + (st.blueOmis[n] + 1) / avgGap);
+    }
+    else if (strategy === 'random') s = 0.2 * f + 0.8 * hashRand(n + 101, st.N);
     else s = 0.40 * f + 0.30 * r + 0.30 * o;
     out.push({ n, f, r, o, score: s });
   }
@@ -823,7 +876,7 @@ function combosOf(arr, k) {
 }
 
 /* 生成 count 注单式推荐:从评分前列红球池中挑"形态最均衡"且互相有差异的 6 红组合 */
-function makeSingles(reds, blues, rs, st, count, m) {
+function makeSingles(reds, blues, rs, bs, st, count, m) {
   count = count || 3;
   const sorted = rs.slice().sort((a, b) => b.score - a.score);
   // 候选池:保证组合数足够(16 个红球可组 8008 种),同时贴合主推荐
@@ -852,8 +905,18 @@ function makeSingles(reds, blues, rs, st, count, m) {
     }
     if (sel.length >= count) break;
   }
+  /* 蓝球分散覆盖: 蓝球命中即中奖, 多注单式使用互不相同的蓝球可在不增加成本的前提下
+     把合计中奖率下限从 n/16 提升到 min(count,16)/16 —— 这是有组合数学依据的结构优化。 */
+  const bluePool = blues.slice();
+  const wantBlue = Math.min(count, BLUE_MAX);
+  if (bluePool.length < wantBlue) {
+    bs.slice().sort((a, b) => b.score - a.score).forEach(x => {
+      if (bluePool.length >= wantBlue) return;
+      if (bluePool.indexOf(x.n) < 0) bluePool.push(x.n);
+    });
+  }
   return sel.slice(0, count).map((p, i) => ({
-    red: p.c, blue: blues[i % blues.length], sum: p.sum, odd: p.odd
+    red: p.c, blue: bluePool[i % bluePool.length], sum: p.sum, odd: p.odd
   }));
 }
 
@@ -869,8 +932,11 @@ function refineBlues(blues, bs, targetN) {
 }
 
 /* 生成完整方案 */
-function makePlan(draws, strategy, m, n, count) {
+function makePlan(draws, strategy, m, n, count, skipSingles) {
   count = Math.max(1, count || 3);
+  /* 防御: 红球少于 6 个无法组成一注, 蓝球至少 1 个 */
+  m = Math.max(6, Math.min(RED_MAX, Math.round(m) || 6));
+  n = Math.max(1, Math.min(BLUE_MAX, Math.round(n) || 1));
   const st = buildStats(draws);
   const rs = scoreReds(st, strategy);
   const bs = scoreBlues(st, strategy);
@@ -888,7 +954,7 @@ function makePlan(draws, strategy, m, n, count) {
   return {
     strategy, m, n, count, st, reds, blues, redCombos, bets, cost,
     redScored, blueScored,
-    singles: makeSingles(reds, blues, rs, st, count, m),
+    singles: skipSingles ? [] : makeSingles(reds, blues, rs, bs, st, count, m),
     oddCount: reds.filter(x => x % 2 === 1).length,
     sumRange: [0, 0]
   };
@@ -931,8 +997,23 @@ if (typeof module !== 'undefined' && module.exports) {
 (function () {
   const $ = s => document.querySelector(s);
   const state = { strategy: 'balanced', reds: 8, blues: 2, count: 3, range: 100 };
+  /* 在线数据源返回的期号/日期属于外部输入, 插入 HTML 前统一转义 */
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   let ANA_DRAWS = DRAWS.slice();   // 分析数据窗口(默认最近100期, 可自定义)
-  const STRAT_NAME = { balanced: '均衡推荐', hot: '热号追踪', cold: '冷号回补' };
+  const STRAT_NAME = {
+    balanced: '均衡推荐', hot: '热号追踪', cold: '冷号回补',
+    bayes: '贝叶斯平滑', trend: '趋势动量', omission: '遗漏回补', random: '加权随机'
+  };
+  const STRAT_DESC = {
+    balanced: '频率 + 近期热度 + 遗漏三项加权，通用基线',
+    hot: '偏好高频与近期热号（追热；历史频次差异多属随机噪声）',
+    cold: '偏好久未出现的低频号（赌回补；无统计依据）',
+    bayes: 'Beta-Binomial 先验把观测频次向理论概率收缩，抑制小样本过拟合',
+    trend: '近期频次相对随机期望的标准化偏离（z-score）',
+    omission: '当前遗漏 ÷ 该号历史平均间隔，衡量超期程度',
+    random: '按历史频率轻微加权的伪随机抽样，不同数据窗口结果不同'
+  };
+  window.SSQ_STRATS = STRAT_NAME;   // 供动态分析等其它脚本复用
 
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
   function ballHTML(n, type, size) {
@@ -942,7 +1023,7 @@ if (typeof module !== 'undefined' && module.exports) {
   /* ---------- 控件 ---------- */
   /* 分析数据范围: 预设最近N期 + 自定义起止期号 */
   function fillAnaSelects() {
-    const opts = DRAWS.map(d => '<option value="' + d.i + '">' + d.i + '（' + d.d.slice(5) + '）</option>').join('');
+    const opts = DRAWS.map(d => '<option value="' + esc(d.i) + '">' + esc(d.i) + '（' + esc(String(d.d).slice(5)) + '）</option>').join('');
     $('#anaFrom').innerHTML = opts;
     $('#anaTo').innerHTML = opts;
     $('#anaFrom').selectedIndex = Math.max(0, DRAWS.length - 100);
@@ -996,8 +1077,8 @@ if (typeof module !== 'undefined' && module.exports) {
     applyAnaRange();
   }
 
-  /* 数字段选择器: 预设按钮 + 「✎ 更多」手工输入(1 ~ max) */
-  function buildNumSeg(seg, list, max, getV, setV) {
+  /* 数字段选择器: 预设按钮 + 「✎ 更多」手工输入(min ~ max) */
+  function buildNumSeg(seg, list, min, max, getV, setV) {
     function mark(v) {
       let hit = false;
       [].forEach.call(seg.querySelectorAll('button[data-v]'), c => {
@@ -1021,19 +1102,19 @@ if (typeof module !== 'undefined' && module.exports) {
     const more = document.createElement('button');
     more.className = 'seg-more';
     more.textContent = '✎ 更多';
-    more.title = '手工输入个数(1-' + max + ')';
+    more.title = '手工输入个数(' + min + '-' + max + ')';
     const inp = document.createElement('input');
     inp.type = 'number';
-    inp.min = 1; inp.max = max; inp.step = 1;
+    inp.min = min; inp.max = max; inp.step = 1;
     inp.className = 'seg-num';
     inp.style.display = 'none';
-    inp.placeholder = '1-' + max;
+    inp.placeholder = min + '-' + max;
     function closeInput() { inp.style.display = 'none'; more.style.display = ''; }
     function applyManual() {
       const v = Math.round(+inp.value);
-      if (!(v >= 1 && v <= max)) {
+      if (!(v >= min && v <= max)) {
         const notify = window.SSQ && window.SSQ.toast ? window.SSQ.toast : window.alert;
-        notify('请输入 1 到 ' + max + ' 之间的整数');
+        notify('请输入 ' + min + ' 到 ' + max + ' 之间的整数');
         inp.focus(); inp.select();
         return;
       }
@@ -1059,8 +1140,8 @@ if (typeof module !== 'undefined' && module.exports) {
 
   function buildSegments() {
     const segRed = $('#segRed'), segBlue = $('#segBlue'), segSt = $('#segStrategy'), segCount = $('#segCount');
-    buildNumSeg(segRed, [6, 7, 8, 9, 10, 11, 12], 33, () => state.reds, v => state.reds = v);
-    buildNumSeg(segBlue, [1, 2, 3, 4, 5], 16, () => state.blues, v => state.blues = v);
+    buildNumSeg(segRed, [6, 7, 8, 9, 10, 11, 12], 6, 33, () => state.reds, v => state.reds = v);
+    buildNumSeg(segBlue, [1, 2, 3, 4, 5], 1, 16, () => state.blues, v => state.blues = v);
     [1, 2, 3, 5, 8, 10].forEach(k => {
       const b = document.createElement('button');
       b.textContent = k + ' 注';
@@ -1076,6 +1157,7 @@ if (typeof module !== 'undefined' && module.exports) {
       const b = document.createElement('button');
       b.textContent = STRAT_NAME[k];
       b.dataset.v = k;
+      b.title = STRAT_DESC[k];
       if (k === state.strategy) b.className = 'on';
       b.onclick = () => {
         state.strategy = k;
@@ -1090,7 +1172,7 @@ if (typeof module !== 'undefined' && module.exports) {
     const last = DRAWS[DRAWS.length - 1];
     $('#heroN').textContent = DRAWS.length;
     $('#heroLast').innerHTML =
-      '<span class="tag">最新 ' + last.i + ' 期 · ' + last.d + '</span>' +
+      '<span class="tag">最新 ' + esc(last.i) + ' 期 · ' + esc(last.d) + '</span>' +
       last.r.map(n => ballHTML(n, 'red', 'sm')).join('') +
       ballHTML(last.b, 'blue', 'sm');
   }
@@ -1181,7 +1263,7 @@ if (typeof module !== 'undefined' && module.exports) {
       const d = DRAWS[i];
       const sum = d.r.reduce((a, b) => a + b, 0);
       const odd = d.r.filter(n => n % 2 === 1).length;
-      html += '<tr><td>' + d.i + '</td><td>' + d.d + '</td><td><span class="mini">' +
+      html += '<tr><td>' + esc(d.i) + '</td><td>' + esc(d.d) + '</td><td><span class="mini">' +
         d.r.map(n => '<i class="r">' + pad(n) + '</i>').join('') +
         '<i class="b">' + pad(d.b) + '</i></span></td><td>' + sum + '</td><td>' + odd + ':' + (6 - odd) + '</td></tr>';
     }
@@ -1193,6 +1275,16 @@ if (typeof module !== 'undefined' && module.exports) {
   /* ---------- 中奖率辅助 ---------- */
   const pct = p => (p * 100).toFixed(2) + '%';
   const oneIn = p => p > 0 ? '1 / ' + Math.round(1 / p).toLocaleString('en-US') : '—';
+  /* 12 万次蒙特卡洛较慢, 按单式组合内容缓存: 购买、切换范围、数据更新时的重渲染不再重复模拟 */
+  const simCache = new Map();
+  function cachedSim(singles, trials) {
+    const key = trials + '|' + singles.map(s => s.red.join(',') + ':' + s.blue).join(';');
+    if (simCache.has(key)) return simCache.get(key);
+    const v = simulateWinRate(singles, trials);
+    if (simCache.size > 40) simCache.clear();
+    simCache.set(key, v);
+    return v;
+  }
 
   /* 中奖率对比表：当前方案 vs 多选 1 红 / 1 蓝 */
   function renderRateTable(plan, pPlan) {
@@ -1216,7 +1308,7 @@ if (typeof module !== 'undefined' && module.exports) {
     let html = '<thead><tr><th>方案</th><th>注数</th><th>合计金额</th><th>中奖率（任意奖等）</th><th>提升</th></tr></thead><tbody>';
     rows.forEach(r => {
       const delta = r.cur ? '—' : '+' + ((r.p - base.p) * 100).toFixed(2) + '%';
-      const mult = r.cur ? '' : '（成本 ×' + (r.cost / base.cost).toFixed(1) + '）';
+      const mult = (r.cur || !base.cost) ? '' : '（成本 ×' + (r.cost / base.cost).toFixed(1) + '）';
       html += '<tr' + (r.cur ? ' class="cur"' : '') + '>' +
         '<td>' + r.label + '</td>' +
         '<td>' + r.bets.toLocaleString('en-US') + ' 注</td>' +
@@ -1319,7 +1411,7 @@ if (typeof module !== 'undefined' && module.exports) {
     const isSingleMode = (plan.m === 6 && plan.n === 1);  // 仅 6红+1蓝 按单式推荐展示; 6红+多蓝 仍是复式
     const pSingle = pWinSingle();
     const pPlanExact = pWinCompound(plan.m, plan.n);
-    const pGroup = simulateWinRate(plan.singles, 120000);   // N 注合计中奖率(模拟)
+    const pGroup = cachedSim(plan.singles, 120000);   // N 注合计中奖率(模拟, 结果缓存)
     const pPlan = isSingleMode ? pGroup : pPlanExact;
     const pJack = isSingleMode
       ? plan.singles.length / 17721088
@@ -1384,10 +1476,13 @@ if (typeof module !== 'undefined' && module.exports) {
           SSQ.buy({ label: '单式 · ' + STRAT_NAME[state.strategy], reds: s.red, blues: [s.blue], bets: 1, cost: PRICE });
         };
       });
+      const blueCover = new Set(plan.singles.map(s => s.blue)).size;
       $('#singlesTotal').innerHTML = '推荐合计：<b>' + plan.singles.length + ' 注</b> × 每注 ' +
         PRICE.toFixed(2) + ' 元 = <b>¥' + (plan.singles.length * PRICE).toFixed(2) + '</b>' +
-        ' ｜ 这 ' + plan.singles.length + ' 注合计中奖率约 <b>' + pct(pGroup) + '</b>' +
-        '（12 万次模拟，注间号码有重叠所以不是单注概率简单相加）';
+        ' ｜ 覆盖 <b>' + blueCover + '</b> 个不同蓝球，这 ' + plan.singles.length +
+        ' 注合计中奖率约 <b>' + pct(pGroup) + '</b>' +
+        '（12 万次模拟。蓝球命中即中奖，让各注蓝球互不相同可在不增加成本的前提下提高合计中奖率；' +
+        '注间红球有重叠，故不是单注概率简单相加）';
     } else {
       $('#singleGrp').style.display = 'none';
     }
@@ -1448,6 +1543,85 @@ if (typeof module !== 'undefined' && module.exports) {
     const box = $('#result');
     box.classList.add('show');
     if (!noScroll) box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /* ---------- 策略横向回测对比 ---------- */
+  /* 经验随机基准: 重复 reps 次「每期完全随机选 m 个红球」, 得到均值的 95% 区间。
+     比理论标准误更可靠 —— 它保留了滑动窗口重叠与同一批数据上的多重比较结构。 */
+  function randomBaseline(draws, m, periods, reps) {
+    const t0 = draws.length - periods;
+    const vals = [];
+    for (let r = 0; r < reps; r++) {
+      let hit = 0;
+      for (let t = t0; t < draws.length; t++) {
+        const pool = [], actual = draws[t].r;
+        while (pool.length < m) {
+          const v = 1 + Math.floor(Math.random() * 33);
+          if (pool.indexOf(v) < 0) pool.push(v);
+        }
+        hit += pool.filter(x => actual.indexOf(x) >= 0).length;
+      }
+      vals.push(hit / periods);
+    }
+    vals.sort((a, b) => a - b);
+    return { lo: vals[Math.floor(reps * 0.025)], hi: vals[Math.floor(reps * 0.975)] };
+  }
+  function runStratCompare() {
+    const btn = $('#btnStratCmp'), out = $('#stratOut');
+    if (ANA_DRAWS.length < 45) {
+      out.innerHTML = '<div class="hint" style="color:#dc2626">当前分析窗口只有 ' + ANA_DRAWS.length +
+        ' 期，回测至少需要 45 期。请切换为「最近100期」或更长的自定义范围。</div>';
+      return;
+    }
+    btn.disabled = true; btn.textContent = '回 测 中…';
+    setTimeout(function () {
+      try {
+        const m = state.reds, n = state.blues;
+        const ks = Object.keys(STRAT_NAME);
+        const cnt = Math.min(30, ANA_DRAWS.length - 40);
+        const half = Math.floor(cnt / 2);
+        /* 拆成前后两段分别回测: 若某策略前段领先、后段落后, 说明是样本内噪声 */
+        const rows = ks.map(k => ({
+          k: k,
+          bt: backtest(ANA_DRAWS, k, m, n, cnt),
+          early: backtest(ANA_DRAWS.slice(0, ANA_DRAWS.length - half), k, m, n, half),
+          late: backtest(ANA_DRAWS, k, m, n, half)
+        }));
+        const rb = cnt ? randomBaseline(ANA_DRAWS, m, cnt, 400) : { lo: 0, hi: 0 };
+        let html = '<div class="rate-wrap"><table class="lb-table"><thead><tr>' +
+          '<th>策略</th><th>平均命中红球</th><th>随机基准</th><th>偏离</th>' +
+          '<th>前' + half + '期</th><th>后' + half + '期</th>' +
+          '<th>蓝球命中率</th><th>随机基准</th><th>判定</th></tr></thead><tbody>';
+        rows.forEach(r => {
+          const b = r.bt;
+          if (!b) { html += '<tr><td>' + STRAT_NAME[r.k] + '</td><td colspan="8">数据不足</td></tr>'; return; }
+          const d = b.avgRedHit - b.baseRedHit;
+          const inNoise = b.avgRedHit >= rb.lo && b.avgRedHit <= rb.hi;
+          html += '<tr' + (r.k === state.strategy ? ' class="me"' : '') + '>' +
+            '<td><b>' + STRAT_NAME[r.k] + '</b>' + (r.k === state.strategy ? '（当前）' : '') + '</td>' +
+            '<td>' + b.avgRedHit.toFixed(2) + ' 个</td>' +
+            '<td>' + b.baseRedHit.toFixed(2) + ' 个</td>' +
+            '<td style="color:' + (d > 0 ? '#e23b3b' : '#0b8f4d') + '">' + (d >= 0 ? '+' : '') + d.toFixed(2) + '</td>' +
+            '<td>' + (r.early ? r.early.avgRedHit.toFixed(2) : '—') + '</td>' +
+            '<td>' + (r.late ? r.late.avgRedHit.toFixed(2) : '—') + '</td>' +
+            '<td>' + (b.blueRate * 100).toFixed(0) + '%</td>' +
+            '<td>' + (b.baseBlueRate * 100).toFixed(0) + '%</td>' +
+            '<td>' + (inNoise ? '<span style="color:#64748b">落在随机区间</span>' : '<span style="color:#e23b3b">超出随机区间</span>') + '</td></tr>';
+        });
+        html += '</tbody></table></div>';
+        html += '<div class="note" style="margin-top:12px">回测 ' + cnt + ' 期 · 完全随机选号（400 次重复）的 95% 区间为 <b>[' +
+          rb.lo.toFixed(2) + ', ' + rb.hi.toFixed(2) + ']</b> 个命中红球。「前/后 ' + half +
+          '期」是同一区间的两个半段，用于观察排名是否翻转。<br>' +
+          '结论：所有策略的单注中奖率都是同一个固定值 <b>6.71%</b>；上表差异只反映「所选号码恰好与开奖号重合的程度」，不是预测能力。' +
+          '这 ' + ks.length + ' 种策略共享同一套历史统计、选号高度重叠，<b>不能当作 ' + ks.length + ' 次独立检验</b>；' +
+          '样本内短期频率持续性容易制造「看起来有效」的结果，换一段期数后排名通常不稳定，任何短期领先都不能外推到未来。</div>';
+        out.innerHTML = html;
+        $('#stratBadge').textContent = cnt + ' 期 × ' + ks.length + ' 种策略';
+      } catch (e) {
+        out.innerHTML = '<div class="hint" style="color:#dc2626">回测出错：' + esc(e.message) + '</div>';
+      }
+      btn.disabled = false; btn.textContent = '开 始 回 测 对 比';
+    }, 30);
   }
 
   /* ---------- 渲染整页(数据更新后可重复调用) ---------- */
@@ -1570,7 +1744,15 @@ if (typeof module !== 'undefined' && module.exports) {
       setSync('已是最新(' + cur.i + ' 期 · ' + cur.d + '),点击重新检查', 'ok');
       return;
     }
-    DRAWS = recs;
+    /* 在线数据源可能只返回较少期数(校验下限为 30)。按期号与内置历史合并,
+       避免用 30 期数据替换掉 100 期历史导致分析窗口退化。 */
+    let merged = recs;
+    if (recs.length < DRAWS.length) {
+      const map = new Map(DRAWS.map(d => [String(d.i), d]));
+      recs.forEach(d => map.set(String(d.i), d));
+      merged = Array.from(map.values()).sort((a, b) => String(a.i).localeCompare(String(b.i)));
+    }
+    DRAWS = merged;
     renderAll(true);
     setSync('✓ 已自动更新至最新 ' + latest.i + ' 期(' + latest.d + '),点击重新检查', 'ok');
   }
@@ -1582,6 +1764,7 @@ if (typeof module !== 'undefined' && module.exports) {
     buildRangeSeg();
     renderAll();
     $('#syncStatus').onclick = autoRefresh;
+    $('#btnStratCmp').onclick = runStratCompare;
 
     $('#btnGo').onclick = function () {
       const btn = this;
@@ -1657,6 +1840,7 @@ if (typeof module !== 'undefined' && module.exports) {
     const uMap = {};
     (remote.users || []).forEach(u => { if (u && u.name) uMap[u.name] = u; });
     (local.users || []).forEach(u => {
+      if (!u || !u.name) return;
       const o = uMap[u.name];
       if (!o) uMap[u.name] = u;
       else if (u.passHash && !o.passHash) uMap[u.name] = u;
@@ -1664,6 +1848,7 @@ if (typeof module !== 'undefined' && module.exports) {
     const pMap = {};
     (remote.purchases || []).forEach(p => { if (p && p.id) pMap[p.id] = p; });
     (local.purchases || []).forEach(p => {
+      if (!p || !p.id) return;
       const o = pMap[p.id];
       if (!o) pMap[p.id] = p;
       else {
@@ -2235,6 +2420,9 @@ if (typeof module !== 'undefined' && module.exports) {
   /* ---------- 动态分析(多组自动推荐对比) ---------- */
   function dynBuildGroups(n) {
     const wrap = $('#dynGroups');
+    const SNAME = window.SSQ_STRATS || { balanced: '均衡推荐' };
+    const stratOpts = Object.keys(SNAME).map(k =>
+      '<option value="' + k + '">' + SNAME[k] + '</option>').join('');
     let html = '';
     for (let i = 1; i <= n; i++) {
       /* 各组默认参数错开, 方便直接对比 */
@@ -2246,7 +2434,7 @@ if (typeof module !== 'undefined' && module.exports) {
         '<option value="custom">✎ 自定义…</option>';
       const issOpts = DRAWS.map(dr => '<option value="' + esc(dr.i) + '">' + esc(dr.i) + '（' + esc(dr.d.slice(5)) + '）</option>').join('');
       html += '<div class="dyn-group"><span class="dg-tag">组 ' + i + '</span>' +
-        '<label>红球 <input type="number" class="seg-num dyn-m" min="1" max="33" step="1" value="' + d[0] + '"></label>' +
+        '<label>红球 <input type="number" class="seg-num dyn-m" min="6" max="33" step="1" value="' + d[0] + '"></label>' +
         '<label>蓝球 <input type="number" class="seg-num dyn-n" min="1" max="16" step="1" value="' + d[1] + '"></label>' +
         '<label>历史期数 <select class="dyn-hmode"><option value="recent">最近 N 期</option>' +
           '<option value="custom">✎ 自定义…</option></select></label>' +
@@ -2254,12 +2442,13 @@ if (typeof module !== 'undefined' && module.exports) {
         '<span class="dyn-hcustom" style="display:none;align-items:center;gap:6px;font-size:12.5px;color:#4a5568;font-weight:600">' +
           '起 <select class="dyn-hfrom">' + issOpts + '</select><span>至</span>' +
           '<select class="dyn-hto">' + issOpts + '</select></span>' +
+        '<label>策略 <select class="dyn-strat">' + stratOpts + '</select></label>' +
         '<label>匹配范围 <select class="dyn-range">' + rangeOpts + '</select></label>' +
         '<span class="dyn-custom" style="display:none;align-items:center;gap:6px;font-size:12.5px;color:#4a5568;font-weight:600">' +
           '<span style="color:#e23b3b;font-size:11.5px;font-weight:800">匹配</span>' +
           '<select class="dyn-from">' + issOpts + '</select><span>至</span>' +
           '<select class="dyn-to">' + issOpts + '</select></span>' +
-        '<span class="pm">策略：均衡推荐 · 自动生成推荐号码并回测</span></div>';
+        '<span class="pm">自动生成推荐号码 → 回测 → 匹配中奖</span></div>';
     }
     wrap.innerHTML = html;
     /* 历史期数切换: 选「✎ 自定义」时用起止期号指定历史数据窗口 */
@@ -2339,6 +2528,7 @@ if (typeof module !== 'undefined' && module.exports) {
       const n = Math.round(+g.querySelector('.dyn-n').value);
       const k = Math.round(+g.querySelector('.dyn-k').value);
       const hMode = g.querySelector('.dyn-hmode').value;
+      const strategy = g.querySelector('.dyn-strat').value;
       const rv = g.querySelector('.dyn-range').value;
       /* 历史数据窗口 → 起止索引(hFrom/hTo) */
       let hFrom, hTo;
@@ -2362,46 +2552,55 @@ if (typeof module !== 'undefined' && module.exports) {
         rFrom = Math.min(fi, ti); rTo = Math.max(fi, ti);
       }
       else { rFrom = DRAWS.length - Math.round(+rv); rTo = DRAWS.length - 1; }
-      if (!(m >= 1 && m <= 33)) { toast('组 ' + (i + 1) + '：红球个数需在 1-33 之间'); return; }
+      if (!(m >= 6 && m <= 33)) { toast('组 ' + (i + 1) + '：红球个数需在 6-33 之间'); return; }
       if (!(n >= 1 && n <= 16)) { toast('组 ' + (i + 1) + '：蓝球个数需在 1-16 之间'); return; }
       if (!(rTo >= rFrom && rFrom >= 0 && rTo < DRAWS.length)) { toast('组 ' + (i + 1) + '：匹配范围无效'); return; }
-      cfgs.push({ m: m, n: n, hMode: hMode, hFrom: hFrom, hTo: hTo, rFrom: rFrom, rTo: rTo });
+      cfgs.push({ m: m, n: n, strategy: strategy, hMode: hMode, hFrom: hFrom, hTo: hTo, rFrom: rFrom, rTo: rTo });
     }
     if (!cfgs.length) { toast('请至少配置一组'); return; }
     const btn = $('#dynRun');
-    btn.textContent = '分 析 中...';
+    btn.textContent = '分 析 中 0/' + cfgs.length + '…';
     btn.disabled = true;
-    setTimeout(function () {
+    /* 单组计算抽离为纯函数: 跳过用不到的单式组合枚举(每组省 8008 次组合评分) */
+    function dynCompute(c, i) {
+      const hist = DRAWS.slice(c.hFrom, c.hTo + 1);
+      const plan = makePlan(hist, c.strategy, c.m, c.n, 1, true);
+      const p = pWinCompound(c.m, c.n);
+      const jack = pJackpot(c.m, c.n);
+      const btk = hist.length >= 45
+        ? backtest(hist, c.strategy, c.m, c.n, Math.min(30, hist.length - 40))
+        : null;
+      /* 按该组匹配范围逐期判奖 */
+      const mPeriods = DRAWS.slice(c.rFrom, c.rTo + 1);
+      let mWin = 0, mHits = 0;
+      const hitList = [];
+      mPeriods.forEach(d => {
+        const r = judgePlan(plan, d.r, d.b);
+        if (r.total > 0) {
+          mWin += r.total; mHits++;
+          hitList.push({ i: d.i, d: d.d, k: r.k, levels: r.levels, total: r.total });
+        }
+      });
+      const mInvest = plan.cost * mPeriods.length;
+      const match = { cnt: mPeriods.length, win: mWin, hits: mHits, hitList: hitList,
+        invest: mInvest, roi: mInvest ? mWin / mInvest : 0 };
+      return { i: i + 1, c: c, plan: plan, p: p, jack: jack, btk: btk, match: match };
+    }
+    /* 逐组分帧: 进度可见, 8 组时不会整段阻塞主线程 */
+    setTimeout(async function () {
       try {
-        const results = cfgs.map((c, i) => {
-          const hist = DRAWS.slice(c.hFrom, c.hTo + 1);
-          const plan = makePlan(hist, 'balanced', c.m, c.n, 3);
-          const p = pWinCompound(c.m, c.n);
-          const jack = pJackpot(c.m, c.n);
-          const btk = hist.length >= 45
-            ? backtest(hist, 'balanced', c.m, c.n, Math.min(30, hist.length - 40))
-            : null;
-          /* 按该组匹配范围逐期判奖 */
-          const mPeriods = DRAWS.slice(c.rFrom, c.rTo + 1);
-          let mWin = 0, mHits = 0;
-          const hitList = [];
-          mPeriods.forEach(d => {
-            const r = judgePlan(plan, d.r, d.b);
-            if (r.total > 0) {
-              mWin += r.total; mHits++;
-              hitList.push({ i: d.i, d: d.d, k: r.k, levels: r.levels, total: r.total });
-            }
-          });
-          const mInvest = plan.cost * mPeriods.length;
-          const match = { cnt: mPeriods.length, win: mWin, hits: mHits, hitList: hitList,
-            invest: mInvest, roi: mInvest ? mWin / mInvest : 0 };
-          return { i: i + 1, c: c, plan: plan, p: p, jack: jack, btk: btk, match: match };
-        });
+        const results = [];
+        for (let gi = 0; gi < cfgs.length; gi++) {
+          btn.textContent = '分 析 中 ' + (gi + 1) + '/' + cfgs.length + '…';
+          await new Promise(res => requestAnimationFrame(() => setTimeout(res, 0)));
+          results.push(dynCompute(cfgs[gi], gi));
+        }
         /* 每组结果卡片 */
         $('#dynBadge').textContent = '共 ' + results.length + ' 组';
         $('#dynResults').innerHTML = results.map(r =>
           '<div class="dyn-res"><div class="res-head"><h3>组 ' + r.i + ' · ' + r.c.m + '红+' + r.c.n +
-          '蓝 · 依据 ' + histLabel(r.c) + '</h3><div class="badge">' + r.plan.bets + ' 注 · ¥' +
+          '蓝 · ' + ((window.SSQ_STRATS || {})[r.c.strategy] || '均衡推荐') + ' · 依据 ' +
+          histLabel(r.c) + '</h3><div class="badge">' + r.plan.bets + ' 注 · ¥' +
           fmt(r.plan.cost) + '</div></div>' +
           '<div style="margin-top:9px">' + ballsHTML(r.plan.reds, r.plan.blues) + '</div>' +
           '<div class="note" style="margin-top:9px">任意奖等中奖率 <b>' + (r.p * 100).toFixed(2) +
@@ -2438,12 +2637,13 @@ if (typeof module !== 'undefined' && module.exports) {
           };
         });
         /* 汇总对比表 */
-        let html = '<thead><tr><th>组</th><th>规格</th><th>历史数据窗口</th><th>匹配范围</th><th>总注数</th><th>合计金额</th>' +
+        let html = '<thead><tr><th>组</th><th>规格</th><th>策略</th><th>历史数据窗口</th><th>匹配范围</th><th>总注数</th><th>合计金额</th>' +
           '<th>中奖率(任意奖)</th><th>一等奖概率</th><th>命中期数</th><th>匹配总奖金</th><th>匹配收益率</th>' +
           '<th>模拟平均命中红球</th></tr></thead><tbody>';
         results.forEach(r => {
           html += '<tr><td class="lb-rank">组 ' + r.i + '</td>' +
             '<td>' + r.c.m + '红+' + r.c.n + '蓝</td>' +
+            '<td>' + ((window.SSQ_STRATS || {})[r.c.strategy] || '均衡推荐') + '</td>' +
             '<td>' + histLabel(r.c) + '</td>' +
             '<td>' + rangeLabel(r) + '</td>' +
             '<td>' + r.plan.bets + '</td>' +
