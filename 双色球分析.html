@@ -270,10 +270,14 @@ tbody tr:hover{background:#fafcff}
 .bt-range select{border:1.5px solid #e3e8f2;border-radius:10px;padding:8px 11px;font-size:13px;font-family:inherit;
   background:#fff;color:#1f2a3d;cursor:pointer;font-variant-numeric:tabular-nums}
 .bt-range select:focus{outline:0;border-color:#e23b3b}
-.bt-range .jbtn,.jbtn.primary{background:linear-gradient(135deg,#e23b3b,#f0663a);color:#fff;padding:9px 20px;font-size:13px;
-  box-shadow:0 4px 12px rgba(226,59,59,.3);transition:.16s}
-.bt-range .jbtn:hover,.jbtn.primary:hover{filter:brightness(1.07);transform:translateY(-1px)}
-.jbtn.primary:disabled{opacity:.65;transform:none;filter:none}
+.bt-range .jbtn,.jbtn.primary{display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  background:linear-gradient(135deg,#e23b3b,#f0663a);color:#fff;border:0;cursor:pointer;font-family:inherit;
+  border-radius:11px;padding:10px 22px;font-size:14px;font-weight:800;letter-spacing:.5px;white-space:nowrap;
+  box-shadow:0 6px 16px rgba(226,59,59,.32);transition:.16s}
+.bt-range .jbtn:hover,.jbtn.primary:hover{filter:brightness(1.06);transform:translateY(-1px);
+  box-shadow:0 9px 22px rgba(226,59,59,.4)}
+.bt-range .jbtn:active,.jbtn.primary:active{transform:translateY(1px);box-shadow:0 4px 12px rgba(226,59,59,.3)}
+.jbtn.primary:disabled{opacity:.65;transform:none;filter:none;cursor:not-allowed}
 .bt-plans{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .bt-plan{display:inline-flex;align-items:center;gap:6px;border:1.5px solid #e3e8f2;border-radius:11px;
   padding:7px 12px;font-size:12.5px;cursor:pointer;background:#fff;user-select:none;color:#1f2a3d;transition:.14s}
@@ -558,7 +562,7 @@ tbody tr:hover{background:#fafcff}
         <select id="btFrom" title="起始期号"></select>
         <span class="rl">至</span>
         <select id="btTo" title="结束期号"></select>
-        <button class="jbtn" id="btRun">开始分析</button>
+        <button class="jbtn" id="btRun"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>开始分析</button>
       </div>
       <div class="ctrl">
         <div class="lbl">选择方案 <span>（可多选，只回测勾选的方案；默认全部）</span></div>
